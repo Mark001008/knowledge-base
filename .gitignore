@@ -1,0 +1,69 @@
+### Java / Maven ###
+target/
+build/
+out/
+.mvn/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+dependency-reduced-pom.xml
+.apt_generated/
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+### Eclipse ###
+.classpath
+.project
+.settings/
+.factorypath
+
+### VS Code ###
+.vscode/
+*.code-workspace
+
+### Vim ###
+*.swp
+*.swo
+*~
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Logs ###
+logs/
+*.log
+
+### JVM ###
+hs_err_pid*
+replay_pid*
+
+### Environment ###
+.env
+.env.*
+.claude/
+src/main/resources/application-local.yml
+
+### Temp ###
+*.tmp
+*.bak
+*.orig
+.mtj.tmp/

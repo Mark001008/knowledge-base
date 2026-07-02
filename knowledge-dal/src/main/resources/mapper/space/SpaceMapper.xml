@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ma.kb.dal.mapper.space.SpaceMapper">
+
+    <!-- 查询用户可访问的知识库ID列表（作为成员或INTERNAL可见） -->
+    <select id="selectAccessibleSpaceIds" resultType="java.lang.Long">
+        SELECT DISTINCT s.id
+        FROM kb_space s
+        LEFT JOIN kb_space_member sm ON sm.space_id = s.id AND sm.user_id = #{userId}
+        WHERE sm.user_id IS NOT NULL
+           OR s.visibility = 'INTERNAL'
+    </select>
+
+</mapper>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ma.kb.dal.mapper.document.DocumentChunkMapper">
+
+    <!-- 删除指定文档的所有分片 -->
+    <delete id="deleteByDocumentId">
+        DELETE FROM kb_document_chunk c
+        WHERE c.document_id = #{documentId}
+    </delete>
+
+</mapper>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ma.kb.dal.mapper.space.SpaceMemberMapper">
+
+    <!-- 查询用户在指定知识库中的角色 -->
+    <select id="selectRoleBySpaceIdAndUserId" resultType="java.lang.String">
+        SELECT sm.role
+        FROM kb_space_member sm
+        WHERE sm.space_id = #{spaceId}
+          AND sm.user_id = #{userId}
+    </select>
+
+</mapper>

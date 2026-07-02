@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.ma.kb</groupId>
+        <artifactId>knowledge-base-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>knowledge-start</artifactId>
+    <name>knowledge-start</name>
+    <description>Knowledge Base Start Module</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-dal</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-manager</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-integration</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ma.kb</groupId>
+            <artifactId>knowledge-trigger</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <jvmArguments>
+                        -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=7897
+                        -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=7897
+                        -Dhttp.nonProxyHosts=localhost|127.0.0.1
+                        -Dhttps.nonProxyHosts=localhost|127.0.0.1
+                        -Djdk.http.auth.tunneling.disabledSchemes=
+                    </jvmArguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

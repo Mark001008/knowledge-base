@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: knowledge-base
+
+server:
+  port: 8080
+  address: 0.0.0.0
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+jwt:
+  secret: dGhpc0lzQVZlcnlMb25nQW5kU2VjdXJlS2V5Rm9ySldUU2lnbmluZzIwMjQ=
+  expires-in: 7200

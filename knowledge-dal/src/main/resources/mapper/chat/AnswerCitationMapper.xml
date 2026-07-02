@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ma.kb.dal.mapper.chat.AnswerCitationMapper">
+
+    <!-- 根据消息ID查询引用列表 -->
+    <select id="selectByMessageId" resultType="com.ma.kb.dal.model.chat.AnswerCitationDO">
+        SELECT c.id, c.message_id, c.document_id, c.chunk_id,
+               c.score, c.quote_text, c.created_at
+        FROM kb_answer_citation c
+        WHERE c.message_id = #{messageId}
+        ORDER BY c.score DESC
+    </select>
+
+</mapper>

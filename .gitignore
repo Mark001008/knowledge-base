@@ -3,6 +3,8 @@ target/
 build/
 out/
 .mvn/
+mvnw
+mvnw.cmd
 *.class
 *.jar
 *.war
@@ -61,6 +63,7 @@ replay_pid*
 .env.*
 .claude/
 src/main/resources/application-local.yml
+knowledge-start/src/main/resources/application-local.yml
 
 ### Temp ###
 *.tmp

@@ -184,7 +184,7 @@ INSERT INTO sys_role (role_code, role_name) VALUES
 
 -- 初始化系统管理员 (密码: admin123)
 INSERT INTO sys_user (username, password_hash, display_name, email, status) VALUES
-  ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', '系统管理员', 'admin@example.com', 'ENABLED');
+  ('admin', '$2a$10$LdsOBIoRBrDKKNsjPXqUKO4GCtYfqYcXzaSKbKeVeTly/1PKn1Cca', '系统管理员', 'admin@example.com', 'ENABLED');
 
 -- 关联管理员角色
 INSERT INTO sys_user_role (user_id, role_id)

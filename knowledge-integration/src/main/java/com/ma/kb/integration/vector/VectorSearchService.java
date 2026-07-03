@@ -37,6 +37,7 @@ public class VectorSearchService {
     private static final String ENTITIES_DELETE_PATH = "/v2/vectordb/entities/delete";
 
     private final String endpoint;
+    private final boolean enabled;
     private final String token;
     private final String collectionName;
     private final int dimension;
@@ -47,12 +48,14 @@ public class VectorSearchService {
     private final AtomicBoolean collectionReady = new AtomicBoolean(false);
 
     public VectorSearchService(
+            @Value("${vector.milvus.enabled:false}") boolean enabled,
             @Value("${vector.milvus.endpoint:http://localhost:19530}") String endpoint,
             @Value("${vector.milvus.token:}") String token,
             @Value("${vector.milvus.collection-name:kb_document_chunks}") String collectionName,
             @Value("${vector.milvus.dimension:1536}") int dimension,
             @Value("${vector.milvus.timeout:15}") int timeoutSeconds,
             EmbeddingModelService embeddingModelService) {
+        this.enabled = enabled;
         this.endpoint = trimTrailingSlash(endpoint);
         this.token = token;
         this.collectionName = collectionName;
@@ -67,6 +70,10 @@ public class VectorSearchService {
 
     public List<SearchResult> search(float[] queryEmbedding, Long spaceId, int topK,
                                      BigDecimal threshold) {
+        if (!enabled) {
+            log.info("Milvus 未启用，跳过向量检索: spaceId={}", spaceId);
+            return List.of();
+        }
         ensureCollectionReady();
 
         ObjectNode body = objectMapper.createObjectNode();
@@ -111,6 +118,11 @@ public class VectorSearchService {
 
     public String store(Long chunkId, Long spaceId, Long documentId, String content,
                         float[] embedding, Map<String, Object> metadata) {
+        if (!enabled) {
+            String vectorId = "disabled_" + chunkId;
+            log.info("Milvus 未启用，跳过向量写入: chunkId={}, vectorId={}", chunkId, vectorId);
+            return vectorId;
+        }
         ensureCollectionReady();
 
         String vectorId = "chunk_" + chunkId;
@@ -140,6 +152,10 @@ public class VectorSearchService {
     }
 
     public void deleteByDocumentId(Long documentId) {
+        if (!enabled) {
+            log.info("Milvus 未启用，跳过向量删除: documentId={}", documentId);
+            return;
+        }
         ensureCollectionReady();
         ObjectNode body = objectMapper.createObjectNode();
         body.put("collectionName", collectionName);

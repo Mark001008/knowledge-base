@@ -12,10 +12,8 @@ COPY knowledge-trigger/pom.xml knowledge-trigger/pom.xml
 COPY knowledge-start/pom.xml knowledge-start/pom.xml
 COPY knowledge-tests/pom.xml knowledge-tests/pom.xml
 
-RUN mvn -B -pl knowledge-start -am -DskipTests dependency:go-offline
-
 COPY . .
-RUN mvn -B -pl knowledge-start -am -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -B -pl knowledge-start -am -DskipTests package
 
 FROM docker.m.daocloud.io/library/eclipse-temurin:21-jre
 WORKDIR /app

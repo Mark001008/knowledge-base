@@ -19,7 +19,7 @@ FROM docker.m.daocloud.io/library/eclipse-temurin:21-jre
 WORKDIR /app
 
 ENV JAVA_OPTS=""
-COPY --from=build /workspace/knowledge-start/target/knowledge-start-0.0.1-SNAPSHOT.jar /app/knowledge-base.jar
+COPY --from=build /workspace/knowledge-start/target/knowledge-start-0.0.1-SNAPSHOT-exec.jar /app/knowledge-base.jar
 
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/knowledge-base.jar"]

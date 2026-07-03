@@ -46,6 +46,10 @@ public class DocumentManager {
         documentMapper.updateById(documentDO);
     }
 
+    public void updateStatus(Long documentId, String parseStatus, String errorMessage) {
+        documentMapper.updateStatus(documentId, parseStatus, errorMessage);
+    }
+
     public void deleteById(Long id) {
         documentMapper.deleteById(id);
     }
@@ -69,6 +73,11 @@ public class DocumentManager {
             documentChunkMapper.insert(chunkDO);
             chunk.setId(chunkDO.getId());
         }
+    }
+
+    public void updateChunk(DocumentChunkBO chunk) {
+        DocumentChunkDO chunkDO = documentConverter.toChunkDO(chunk);
+        documentChunkMapper.updateById(chunkDO);
     }
 
     public void deleteChunksByDocumentId(Long documentId) {

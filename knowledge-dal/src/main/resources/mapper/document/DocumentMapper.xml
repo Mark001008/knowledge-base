@@ -9,4 +9,12 @@
         WHERE d.space_id = #{spaceId}
     </select>
 
+    <update id="updateStatus">
+        UPDATE kb_document
+        SET parse_status = #{parseStatus},
+            error_message = #{errorMessage},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
 </mapper>

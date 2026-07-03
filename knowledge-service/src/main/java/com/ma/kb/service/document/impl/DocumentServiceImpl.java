@@ -6,9 +6,11 @@ import com.ma.kb.common.enums.SpaceRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.integration.storage.StorageService;
+import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.document.DocumentManager;
 import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
+import com.ma.kb.service.document.DocumentIngestionService;
 import com.ma.kb.service.document.DocumentService;
 import com.ma.kb.service.document.converter.DocumentDTOConverter;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
@@ -33,13 +35,19 @@ public class DocumentServiceImpl implements DocumentService {
     private final SpaceManager spaceManager;
     private final StorageService storageService;
     private final DocumentDTOConverter documentDTOConverter;
+    private final DocumentIngestionService documentIngestionService;
+    private final VectorSearchService vectorSearchService;
 
     public DocumentServiceImpl(DocumentManager documentManager, SpaceManager spaceManager,
-                               StorageService storageService, DocumentDTOConverter documentDTOConverter) {
+                               StorageService storageService, DocumentDTOConverter documentDTOConverter,
+                               DocumentIngestionService documentIngestionService,
+                               VectorSearchService vectorSearchService) {
         this.documentManager = documentManager;
         this.spaceManager = spaceManager;
         this.storageService = storageService;
         this.documentDTOConverter = documentDTOConverter;
+        this.documentIngestionService = documentIngestionService;
+        this.vectorSearchService = vectorSearchService;
     }
 
     @Override
@@ -69,9 +77,10 @@ public class DocumentServiceImpl implements DocumentService {
 
         DocumentBO created = documentManager.create(documentBO);
         log.info("文档上传成功: id={}, fileName={}, spaceId={}", created.getId(), originalFilename, spaceId);
+        documentIngestionService.ingest(created.getId());
 
-        return new DocumentUploadResponse(created.getId(), originalFilename,
-                DocumentStatusEnum.PENDING.getCode());
+        DocumentBO indexed = documentManager.getById(created.getId());
+        return new DocumentUploadResponse(created.getId(), originalFilename, indexed.getParseStatus());
     }
 
     @Override
@@ -94,6 +103,11 @@ public class DocumentServiceImpl implements DocumentService {
         checkSpaceRole(userId, document.getSpaceId(), SpaceRoleEnum.ADMIN);
 
         storageService.delete(document.getStorageBucket(), document.getStorageObjectKey());
+        try {
+            vectorSearchService.deleteByDocumentId(documentId);
+        } catch (Exception e) {
+            log.warn("删除文档向量失败，继续删除业务数据: id={}", documentId, e);
+        }
         documentManager.deleteChunksByDocumentId(documentId);
         documentManager.deleteById(documentId);
         log.info("文档删除成功: id={}", documentId);
@@ -108,6 +122,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         DocumentBO reindexBO = documentDTOConverter.toReindexBO(documentId);
         documentManager.update(reindexBO);
+        documentIngestionService.ingest(documentId);
 
         log.info("文档重建索引已提交: id={}", documentId);
     }

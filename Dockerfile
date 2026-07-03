@@ -1,4 +1,4 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM docker.m.daocloud.io/library/maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
 COPY pom.xml .
@@ -17,7 +17,7 @@ RUN mvn -B -pl knowledge-start -am -DskipTests dependency:go-offline
 COPY . .
 RUN mvn -B -pl knowledge-start -am -DskipTests package
 
-FROM eclipse-temurin:21-jre
+FROM docker.m.daocloud.io/library/eclipse-temurin:21-jre
 WORKDIR /app
 
 ENV JAVA_OPTS=""

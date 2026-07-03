@@ -70,6 +70,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <classifier>exec</classifier>
                     <jvmArguments>
                         -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=7897
                         -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=7897

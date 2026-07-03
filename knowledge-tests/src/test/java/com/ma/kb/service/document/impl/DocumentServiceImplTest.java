@@ -4,9 +4,11 @@ import com.ma.kb.common.enums.DocumentStatusEnum;
 import com.ma.kb.common.enums.SpaceRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.integration.storage.StorageService;
+import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.document.DocumentManager;
 import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
+import com.ma.kb.service.document.DocumentIngestionService;
 import com.ma.kb.service.document.converter.DocumentDTOConverter;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
@@ -34,6 +36,10 @@ class DocumentServiceImplTest {
     private StorageService storageService;
     @Mock
     private DocumentDTOConverter documentDTOConverter;
+    @Mock
+    private DocumentIngestionService documentIngestionService;
+    @Mock
+    private VectorSearchService vectorSearchService;
 
     private DocumentServiceImpl documentService;
 
@@ -43,7 +49,14 @@ class DocumentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        documentService = new DocumentServiceImpl(documentManager, spaceManager, storageService, documentDTOConverter);
+        documentService = new DocumentServiceImpl(
+                documentManager,
+                spaceManager,
+                storageService,
+                documentDTOConverter,
+                documentIngestionService,
+                vectorSearchService
+        );
     }
 
     @Test
@@ -52,8 +65,11 @@ class DocumentServiceImplTest {
         when(storageService.getDefaultBucket()).thenReturn("kb-documents");
 
         DocumentBO docBO = buildDocumentBO(DOC_ID, "test.pdf", "PDF");
+        DocumentBO indexedBO = buildDocumentBO(DOC_ID, "test.pdf", "PDF");
+        indexedBO.setParseStatus(DocumentStatusEnum.COMPLETED.getCode());
         when(documentDTOConverter.toBO(any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(docBO);
         when(documentManager.create(any())).thenReturn(docBO);
+        when(documentManager.getById(DOC_ID)).thenReturn(indexedBO);
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.pdf", "application/pdf", "test content".getBytes());
@@ -63,7 +79,8 @@ class DocumentServiceImplTest {
         assertNotNull(response);
         assertEquals(DOC_ID, response.documentId());
         assertEquals("test.pdf", response.fileName());
-        assertEquals(DocumentStatusEnum.PENDING.getCode(), response.status());
+        assertEquals(DocumentStatusEnum.COMPLETED.getCode(), response.status());
+        verify(documentIngestionService).ingest(DOC_ID);
     }
 
     @Test
@@ -99,6 +116,7 @@ class DocumentServiceImplTest {
         documentService.delete(USER_ID, DOC_ID);
 
         verify(storageService).delete(anyString(), anyString());
+        verify(vectorSearchService).deleteByDocumentId(DOC_ID);
         verify(documentManager).deleteChunksByDocumentId(DOC_ID);
         verify(documentManager).deleteById(DOC_ID);
     }
@@ -126,6 +144,7 @@ class DocumentServiceImplTest {
 
         verify(documentManager).deleteChunksByDocumentId(DOC_ID);
         verify(documentManager).update(any(DocumentBO.class));
+        verify(documentIngestionService).ingest(DOC_ID);
     }
 
     private DocumentBO buildDocumentBO(Long id, String fileName, String fileType) {

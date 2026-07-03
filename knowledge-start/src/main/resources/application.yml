@@ -21,3 +21,11 @@ storage:
   local:
     base-path: ./storage
     bucket: kb-documents
+
+vector:
+  milvus:
+    endpoint: ${VECTOR_MILVUS_ENDPOINT:http://localhost:19530}
+    token: ${VECTOR_MILVUS_TOKEN:}
+    collection-name: ${VECTOR_MILVUS_COLLECTION_NAME:kb_document_chunks}
+    dimension: ${VECTOR_MILVUS_DIMENSION:1536}
+    timeout: ${VECTOR_MILVUS_TIMEOUT:15}

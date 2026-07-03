@@ -2,11 +2,11 @@ package com.ma.kb.start.controller.document;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.document.DocumentService;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,9 +18,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 public class DocumentController {
-
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
 
     private final DocumentService documentService;
     private final JwtService jwtService;
@@ -37,7 +34,7 @@ public class DocumentController {
     public ApiResponse<DocumentUploadResponse> upload(HttpServletRequest request,
                                                       @PathVariable Long spaceId,
                                                       @RequestParam("file") MultipartFile file) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentUploadResponse response = documentService.upload(userId, spaceId, file);
         return ApiResponse.success(response);
     }
@@ -48,7 +45,7 @@ public class DocumentController {
     @GetMapping("/spaces/{spaceId}/documents")
     public ApiResponse<List<DocumentVO>> listBySpaceId(HttpServletRequest request,
                                                        @PathVariable Long spaceId) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<DocumentVO> docs = documentService.listBySpaceId(userId, spaceId);
         return ApiResponse.success(docs);
     }
@@ -58,7 +55,7 @@ public class DocumentController {
      */
     @GetMapping("/documents/{id}")
     public ApiResponse<DocumentVO> getById(HttpServletRequest request, @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentVO doc = documentService.getById(userId, id);
         return ApiResponse.success(doc);
     }
@@ -68,7 +65,7 @@ public class DocumentController {
      */
     @DeleteMapping("/documents/{id}")
     public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         documentService.delete(userId, id);
         return ApiResponse.success();
     }
@@ -78,17 +75,8 @@ public class DocumentController {
      */
     @PostMapping("/documents/{id}/reindex")
     public ApiResponse<Void> reindex(HttpServletRequest request, @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         documentService.reindex(userId, id);
         return ApiResponse.success();
-    }
-
-    private Long getCurrentUserId(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            String token = bearerToken.substring(BEARER_PREFIX.length());
-            return jwtService.getUserId(token);
-        }
-        return null;
     }
 }

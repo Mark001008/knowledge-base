@@ -3,6 +3,7 @@ package com.ma.kb.integration.storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -15,6 +16,7 @@ import java.nio.file.StandardCopyOption;
  * 本地文件存储实现（MVP 阶段）
  */
 @Service
+@ConditionalOnProperty(name = "storage.type", havingValue = "local", matchIfMissing = true)
 public class LocalStorageServiceImpl implements StorageService {
 
     private static final Logger log = LoggerFactory.getLogger(LocalStorageServiceImpl.class);

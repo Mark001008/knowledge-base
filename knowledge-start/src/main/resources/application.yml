@@ -15,3 +15,9 @@ mybatis-plus:
 jwt:
   secret: dGhpc0lzQVZlcnlMb25nQW5kU2VjdXJlS2V5Rm9ySldUU2lnbmluZzIwMjQ=
   expires-in: 7200
+
+storage:
+  type: local
+  local:
+    base-path: ./storage
+    bucket: kb-documents

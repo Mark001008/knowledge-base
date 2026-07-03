@@ -1,12 +1,12 @@
 package com.ma.kb.start.controller.auth;
 
 import com.ma.kb.common.response.ApiResponse;
+import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.auth.AuthService;
 import com.ma.kb.service.auth.dto.LoginRequest;
 import com.ma.kb.service.auth.dto.LoginResponse;
 import com.ma.kb.service.auth.dto.UserInfoDTO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,9 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthService authService;
 
@@ -43,16 +40,8 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ApiResponse<UserInfoDTO> getCurrentUser(HttpServletRequest request) {
-        String token = extractToken(request);
+        String token = SecurityUtils.extractBearerToken(request.getHeader("Authorization"));
         UserInfoDTO userInfo = authService.getCurrentUser(token);
         return ApiResponse.success(userInfo);
-    }
-
-    private String extractToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            return bearerToken.substring(BEARER_PREFIX.length());
-        }
-        return null;
     }
 }

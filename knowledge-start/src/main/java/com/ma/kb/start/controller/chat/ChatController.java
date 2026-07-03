@@ -2,10 +2,10 @@ package com.ma.kb.start.controller.chat;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.chat.ChatService;
 import com.ma.kb.service.chat.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,9 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 public class ChatController {
-
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
 
     private final ChatService chatService;
     private final JwtService jwtService;
@@ -35,7 +32,7 @@ public class ChatController {
     public ApiResponse<ChatSessionVO> createSession(HttpServletRequest request,
                                                     @PathVariable Long spaceId,
                                                     @RequestBody ChatSessionCreateRequest body) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         ChatSessionVO session = chatService.createSession(userId, spaceId, body);
         return ApiResponse.success(session);
     }
@@ -46,7 +43,7 @@ public class ChatController {
     @GetMapping("/spaces/{spaceId}/chat/sessions")
     public ApiResponse<List<ChatSessionVO>> listSessions(HttpServletRequest request,
                                                          @PathVariable Long spaceId) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<ChatSessionVO> sessions = chatService.listSessions(userId, spaceId);
         return ApiResponse.success(sessions);
     }
@@ -58,7 +55,7 @@ public class ChatController {
     public ApiResponse<ChatMessageResponse> sendMessage(HttpServletRequest request,
                                                         @PathVariable Long sessionId,
                                                         @RequestBody ChatMessageRequest body) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         ChatMessageResponse response = chatService.sendMessage(userId, sessionId, body);
         return ApiResponse.success(response);
     }
@@ -69,17 +66,8 @@ public class ChatController {
     @GetMapping("/chat/sessions/{sessionId}/messages")
     public ApiResponse<List<ChatMessageVO>> listMessages(HttpServletRequest request,
                                                          @PathVariable Long sessionId) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<ChatMessageVO> messages = chatService.listMessages(userId, sessionId);
         return ApiResponse.success(messages);
-    }
-
-    private Long getCurrentUserId(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            String token = bearerToken.substring(BEARER_PREFIX.length());
-            return jwtService.getUserId(token);
-        }
-        return null;
     }
 }

@@ -2,10 +2,10 @@ package com.ma.kb.start.controller.space;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.space.SpaceService;
 import com.ma.kb.service.space.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,9 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/spaces")
 public class SpaceController {
-
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
 
     private final SpaceService spaceService;
     private final JwtService jwtService;
@@ -34,7 +31,7 @@ public class SpaceController {
     @PostMapping
     public ApiResponse<SpaceVO> create(HttpServletRequest request,
                                        @RequestBody SpaceCreateRequest body) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.create(userId, body);
         return ApiResponse.success(space);
     }
@@ -44,7 +41,7 @@ public class SpaceController {
      */
     @GetMapping
     public ApiResponse<List<SpaceVO>> list(HttpServletRequest request) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<SpaceVO> spaces = spaceService.listAccessible(userId);
         return ApiResponse.success(spaces);
     }
@@ -54,7 +51,7 @@ public class SpaceController {
      */
     @GetMapping("/{id}")
     public ApiResponse<SpaceVO> getById(HttpServletRequest request, @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.getById(userId, id);
         return ApiResponse.success(space);
     }
@@ -65,7 +62,7 @@ public class SpaceController {
     @PutMapping("/{id}")
     public ApiResponse<SpaceVO> update(HttpServletRequest request, @PathVariable Long id,
                                        @RequestBody SpaceUpdateRequest body) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.update(userId, id, body);
         return ApiResponse.success(space);
     }
@@ -75,7 +72,7 @@ public class SpaceController {
      */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         spaceService.delete(userId, id);
         return ApiResponse.success();
     }
@@ -86,7 +83,7 @@ public class SpaceController {
     @PostMapping("/{id}/members")
     public ApiResponse<Void> addMember(HttpServletRequest request, @PathVariable Long id,
                                        @RequestBody SpaceMemberRequest body) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         spaceService.addMember(userId, id, body);
         return ApiResponse.success();
     }
@@ -97,7 +94,7 @@ public class SpaceController {
     @GetMapping("/{id}/members")
     public ApiResponse<List<SpaceMemberVO>> listMembers(HttpServletRequest request,
                                                         @PathVariable Long id) {
-        Long userId = getCurrentUserId(request);
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<SpaceMemberVO> members = spaceService.listMembers(userId, id);
         return ApiResponse.success(members);
     }
@@ -105,21 +102,12 @@ public class SpaceController {
     /**
      * 移除知识库成员
      */
-    @DeleteMapping("/{id}/members/{userId}")
+    @DeleteMapping("/{id}/members/{memberId}")
     public ApiResponse<Void> removeMember(HttpServletRequest request,
                                           @PathVariable Long id,
-                                          @PathVariable Long userId) {
-        Long currentUserId = getCurrentUserId(request);
-        spaceService.removeMember(currentUserId, id, userId);
+                                          @PathVariable Long memberId) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        spaceService.removeMember(userId, id, memberId);
         return ApiResponse.success();
-    }
-
-    private Long getCurrentUserId(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            String token = bearerToken.substring(BEARER_PREFIX.length());
-            return jwtService.getUserId(token);
-        }
-        return null;
     }
 }

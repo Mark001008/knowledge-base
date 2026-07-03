@@ -4,7 +4,7 @@
 
 企业内部通常存在大量非结构化资料，例如 PDF、Word、Markdown、TXT、网页文档、制度文件、产品手册、技术文档、客服话术和项目资料。传统目录式文档管理依赖人工查找，检索效率低，且难以直接回答具体问题。
 
-本项目拟建设一个基于 Java、Spring Boot 和 Spring AI 的 AI 知识库平台，支持文档上传、解析、向量化、检索增强生成（RAG）问答、引用溯源、权限控制和问答记录管理，帮助用户通过自然语言快速获取可信答案。
+本项目拟建设一个基于 Java、Spring Boot、MySQL、MinIO、可选 Milvus 和 OpenAI 兼容模型接口的 AI 知识库平台，支持文档上传、解析、可选向量化、检索增强生成（RAG）问答、引用溯源、权限控制和问答记录管理，帮助用户通过自然语言快速获取可信答案。
 
 ## 2. 建设目标
 
@@ -12,7 +12,7 @@
 
 - 支持用户创建和管理多个知识库。
 - 支持上传 PDF、Word、TXT、Markdown 等知识资料。
-- 支持自动解析文档内容，并按语义切片生成向量索引。
+- 支持自动解析文档内容，按语义切片保存分片，并在启用 Milvus 时生成向量索引。
 - 支持用户基于知识库进行自然语言问答。
 - 支持回答结果附带引用来源，便于用户核验。
 - 支持基础用户、角色和知识库权限控制。
@@ -49,8 +49,9 @@
   -> 提取文档文本
   -> 文本清洗
   -> 文本切片
-  -> 调用 Embedding 模型生成向量
-  -> 写入 Milvus 向量库
+  -> 写入文档分片
+  -> 如果启用 Milvus，则调用 Embedding 模型生成向量并写入 Milvus
+  -> 如果未启用 Milvus，则跳过向量写入
   -> 更新文档索引状态
 ```
 
@@ -59,7 +60,7 @@
 ```text
 用户选择知识库并提问
   -> 校验用户权限
-  -> 对问题生成查询向量
+  -> 如启用向量能力，则对问题生成查询向量
   -> 从向量库检索相关文档片段
   -> 构造 RAG Prompt
   -> 调用 Chat Model 生成答案
@@ -114,9 +115,10 @@
 
 ### 5.5 向量索引
 
-- 支持调用 Spring AI `EmbeddingModel` 生成文本向量。
-- 支持使用 Spring AI `VectorStore` 存储和检索向量。
-- 第一阶段默认使用 MySQL 8.0 保存业务数据，使用 Milvus 保存向量数据。
+- 支持调用 OpenAI 兼容 Embedding 接口生成文本向量。
+- 支持使用 Milvus 存储和检索向量，Milvus 未启用时跳过向量写入和向量检索。
+- 第一阶段默认使用 MySQL 8.0 保存业务数据和文档分片；Milvus 通过 `VECTOR_MILVUS_ENABLED` 控制是否启用。
+- 当前 2c2g 部署默认关闭 Milvus，后续单独 Milvus 服务器就绪后再启用。
 - 支持按知识库 ID 过滤检索范围。
 - 支持按权限过滤检索范围。
 - 支持配置检索 TopK 和相似度阈值。
@@ -190,11 +192,11 @@
 | 层级 | 技术 |
 | --- | --- |
 | 后端框架 | Java 21、Spring Boot 3.x |
-| AI 框架 | Spring AI 2.x |
+| AI 接入 | 当前直接对接 OpenAI 兼容 HTTP 接口，后续可接 Spring AI |
 | 大模型 | OpenAI、Azure OpenAI、DeepSeek、Ollama 可选 |
 | Embedding | OpenAI Embedding、Ollama Embedding 或兼容模型 |
 | 数据库 | MySQL 8.0 |
-| 向量库 | Milvus |
+| 向量库 | Milvus，可配置关闭 |
 | 文件存储 | MinIO 或本地文件存储 |
 | 权限认证 | Spring Security + JWT |
 | 数据访问 | Spring Data JPA 或 MyBatis Plus |
@@ -242,10 +244,10 @@ admin          系统配置、日志、模型配置
 
 ### 7.3 核心组件
 
-- `ChatClient`：用于调用聊天模型生成回答。
-- `EmbeddingModel`：用于生成文档片段和用户问题的向量。
-- `VectorStore`：用于写入和检索向量数据。
-- `QuestionAnswerAdvisor` 或自定义 RAG 流程：用于组合检索上下文和用户问题。
+- `ModelClient`：用于调用 OpenAI 兼容聊天模型生成回答。
+- `EmbeddingClient`：用于生成文档片段和用户问题的向量。
+- `VectorSearchService`：用于在 Milvus 启用时写入和检索向量数据。
+- 自定义 RAG 流程：用于组合检索上下文和用户问题。
 - 文档 Reader、Transformer、Splitter：用于文档解析和切片。
 
 ## 8. 数据模型设计
@@ -452,7 +454,7 @@ admin          系统配置、日志、模型配置
 - PDF、TXT、Markdown 解析。
 - 文档切片。
 - Embedding 生成。
-- Milvus 向量入库。
+- Milvus 向量入库能力，当前部署可通过配置关闭。
 - 知识库问答。
 - 答案引用来源。
 - 问答历史记录。

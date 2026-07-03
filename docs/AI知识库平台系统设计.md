@@ -2,14 +2,14 @@
 
 ## 1. 设计概述
 
-本文档基于《AI知识库平台需求文档》编写，面向第一阶段 MVP 开发落地。系统采用 Java 21、Spring Boot 3.x、Spring AI 2.x、MySQL 8.0、Milvus、MinIO 和 OpenAI 兼容模型接口，建设一个支持文档上传、解析、向量化、检索增强问答、引用溯源、权限控制和问答记录的 AI 知识库平台。
+本文档基于《AI知识库平台需求文档》编写，面向第一阶段 MVP 开发落地。系统采用 Java 21、Spring Boot 3.x、MySQL 8.0、MinIO、可选 Milvus 和 OpenAI 兼容模型接口，建设一个支持文档上传、解析、切片、可选向量化、检索增强问答、引用溯源、权限控制和问答记录的 AI 知识库平台。
 
 第一阶段只设计后端、接口、数据、AI/RAG、部署与运维。前端不做详细技术设计，仅保留 API 对接边界。
 
 ### 1.1 设计目标
 
 - 支持用户登录、知识库管理、文档上传和文档处理状态查询。
-- 支持 PDF、TXT、Markdown 文档解析、清洗、切片和向量入库。
+- 支持 PDF、TXT、Markdown 文档解析、清洗、切片和可选向量入库。
 - 支持基于知识库的自然语言问答，并返回引用来源。
 - 支持知识库级权限控制，防止越权访问和越权检索。
 - 支持 Docker Compose 本地部署。
@@ -21,10 +21,10 @@
 | --- | --- |
 | 后端语言 | Java 21 |
 | 后端框架 | Spring Boot 3.x |
-| AI 框架 | Spring AI 2.x |
+| AI 框架 | 当前直接对接 OpenAI 兼容 HTTP 接口，后续可接 Spring AI |
 | 模型接口 | OpenAI 兼容接口 |
 | 数据库 | MySQL 8.0 |
-| 向量能力 | Milvus |
+| 向量能力 | Milvus，可通过 `VECTOR_MILVUS_ENABLED` 关闭 |
 | 文件存储 | MinIO |
 | 认证授权 | Spring Security + JWT |
 | 数据访问 | MyBatis Plus |
@@ -46,8 +46,9 @@ flowchart LR
     DOC --> MINIO[MinIO 原始文件]
     DOC --> TASK[异步文档处理任务]
     TASK --> PARSER[文档解析/清洗/切片]
-    PARSER --> EMB[Spring AI EmbeddingModel]
-    EMB --> VDB[(Milvus 向量库)]
+    PARSER --> CHUNK[(MySQL 文档分片)]
+    PARSER --> EMB[Embedding 生成]
+    EMB --> VDB[(可选 Milvus 向量库)]
     TASK --> DB[(MySQL 业务库)]
 
     CHAT --> EMB
@@ -191,7 +192,7 @@ tests -> start/service/core/manager/integration/dal
 ### 2.4 外部依赖
 
 - MySQL 8.0：保存业务数据和文档分片元数据。
-- Milvus：提供向量存储和相似度检索。
+- Milvus：提供可选向量存储和相似度检索。
 - MinIO：保存用户上传的原始文件。
 - OpenAI 兼容模型服务：提供 Chat Model 和 Embedding Model。
 
@@ -293,8 +294,8 @@ MVP 内置角色：
 - 根据文档类型选择解析器。
 - 清洗文本内容。
 - 按 Token 估算长度切片。
-- 调用 Spring AI `EmbeddingModel` 生成向量。
-- 调用 Spring AI `VectorStore` 写入 Milvus。
+- 调用 OpenAI 兼容 Embedding 接口生成向量。
+- 在 `VECTOR_MILVUS_ENABLED=true` 时写入 Milvus。
 - 保存业务分片记录。
 
 切片策略：
@@ -313,7 +314,7 @@ MVP 内置角色：
 - 对问题生成 Embedding。
 - 按知识库和权限过滤检索相关分片。
 - 构造 RAG Prompt。
-- 调用 Spring AI `ChatClient` 生成回答。
+- 调用 OpenAI 兼容 Chat 接口生成回答。
 - 支持普通返回和 SSE 流式返回。
 - 保存回答、引用来源、耗时和 Token 统计。
 
@@ -345,8 +346,8 @@ sequenceDiagram
     participant M as MinIO
     participant DB as MySQL
     participant T as Async Task
-    participant E as EmbeddingModel
-    participant V as VectorStore
+    participant E as EmbeddingClient
+    participant V as Optional Milvus
 
     U->>API: 上传文档
     API->>API: 校验权限/类型/大小
@@ -360,15 +361,21 @@ sequenceDiagram
     T->>T: 解析/清洗文本
     T->>DB: 更新状态 INDEXING
     T->>T: 文本切片
-    T->>E: 批量生成向量
-    T->>V: 写入向量和metadata
     T->>DB: 保存 kb_document_chunk
+    alt Milvus 已启用
+        T->>E: 批量生成向量
+        T->>V: 写入向量和metadata
+    else Milvus 未启用
+        T->>T: 跳过向量写入
+    end
     T->>DB: 更新状态 COMPLETED
 ```
 
 失败处理：
 
-- 解析、切片、Embedding、向量写入任一阶段失败，文档状态更新为 `FAILED`。
+- 解析、切片、分片落库失败时，文档状态更新为 `FAILED`。
+- `VECTOR_MILVUS_ENABLED=true` 时，Embedding 或向量写入失败，文档状态更新为 `FAILED`。
+- `VECTOR_MILVUS_ENABLED=false` 时，跳过 Embedding 和向量写入，文档可正常进入 `COMPLETED`。
 - `error_message` 记录可读失败原因。
 - 重建索引时先删除旧分片和旧向量，再重新处理；失败后文档状态为 `FAILED`，旧索引不再保留。
 
@@ -379,16 +386,20 @@ sequenceDiagram
     participant U as 用户
     participant API as Chat API
     participant DB as MySQL
-    participant E as EmbeddingModel
-    participant V as VectorStore
-    participant L as ChatClient
+    participant E as EmbeddingClient
+    participant V as Optional Milvus
+    participant L as ChatModel
 
     U->>API: 发送问题
     API->>DB: 校验会话和知识库权限
     API->>DB: 保存 user 消息
-    API->>E: 生成问题向量
-    API->>V: 按 space_id 检索 TopK 分片
-    API->>API: 过滤低于阈值的结果
+    alt Milvus 已启用
+        API->>E: 生成问题向量
+        API->>V: 按 space_id 检索 TopK 分片
+        API->>API: 过滤低于阈值的结果
+    else Milvus 未启用
+        API->>API: 返回无可用检索上下文
+    end
     alt 有有效上下文
         API->>L: 发送 RAG Prompt
         L-->>API: 返回回答
@@ -585,7 +596,12 @@ sequenceDiagram
 
 ## 6. 向量表设计
 
-优先使用 Spring AI Milvus VectorStore。业务系统不直接依赖 Milvus collection 的内部字段，只通过 `VectorStore` 写入和检索。
+Milvus 是可选向量能力。当前代码通过 `VECTOR_MILVUS_ENABLED` 控制是否启用：
+
+- `false`：不连接 Milvus。文档上传后完成 MinIO 存储、文本解析、清洗、切片和 `kb_document_chunk` 落库，向量写入和向量检索跳过。
+- `true`：连接独立 Milvus 服务，写入和检索文档分片向量。
+
+当前实现通过 Milvus HTTP API 写入和检索，collection 字段由服务初始化；后续可演进为 Spring AI Milvus VectorStore。
 
 每条向量 Document 的 metadata 必须包含：
 
@@ -779,7 +795,7 @@ sequenceDiagram
 行为：
 
 - 删除 `kb_document_chunk`。
-- 通过 `VectorStore` 删除对应向量。
+- `VECTOR_MILVUS_ENABLED=true` 时删除对应向量；未启用时跳过向量删除。
 - 删除 MinIO 原始文件。
 - 删除或软删除 `kb_document`。MVP 推荐软删除，字段可在实现时增加 `deleted_at`。
 
@@ -995,7 +1011,7 @@ public enum ChatRole {
 ### 9.2 检索安全规则
 
 - Chat API 先校验用户是否有会话所属知识库访问权限。
-- VectorStore 检索必须附带 `space_id` 过滤条件。
+- 向量检索必须附带 `space_id` 过滤条件。
 - 不允许前端传入任意 metadata filter。
 - 引用详情查询必须根据 `chunk_id` 反查 `kb_document_chunk` 并校验 `space_id` 权限。
 
@@ -1004,18 +1020,20 @@ public enum ChatRole {
 ### 10.1 环境变量
 
 ```properties
-SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/aikb?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-SPRING_DATASOURCE_USERNAME=aikb
-SPRING_DATASOURCE_PASSWORD=aikb_password
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/kb_base_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+SPRING_DATASOURCE_USERNAME=<来自 application-local.yml>
+SPRING_DATASOURCE_PASSWORD=<来自 application-local.yml>
 
 MINIO_ENDPOINT=http://minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=aikb-documents
+MINIO_BUCKET=agent-documents
 
-MILVUS_HOST=milvus
-MILVUS_PORT=19530
-MILVUS_COLLECTION=aikb_document_chunks
+VECTOR_MILVUS_ENABLED=false
+VECTOR_MILVUS_ENDPOINT=http://milvus:19530
+VECTOR_MILVUS_COLLECTION_NAME=kb_document_chunks
+VECTOR_MILVUS_DIMENSION=1536
+VECTOR_MILVUS_TIMEOUT=30
 
 AI_BASE_URL=https://api.example.com/v1
 AI_API_KEY=replace-me
@@ -1026,27 +1044,32 @@ JWT_SECRET=replace-with-long-random-secret
 JWT_EXPIRES_IN=7200
 ```
 
-### 10.2 Spring AI 配置
+### 10.2 模型与向量配置
 
-实现时将 OpenAI 兼容接口映射到 Spring AI OpenAI 配置项。不同供应商只替换 `base-url`、`api-key`、`chat-model` 和 `embedding-model`。向量存储使用 Spring AI Milvus VectorStore，业务代码只依赖 `VectorStore` 接口。
+当前实现直接调用 OpenAI 兼容接口：
+
+- Chat：`/chat/completions`
+- Embedding：`/embeddings`
+- 未配置 `AI_EMBEDDING_MODEL` 时，使用本地哈希向量兜底，保证文档处理流程可完成。
+
+Milvus 默认关闭。当前 2c2g 服务器不部署 Milvus/etcd，后续独立 Milvus 机器可用后再启用。
 
 ```yaml
-spring:
-  ai:
-    openai:
-      base-url: ${AI_BASE_URL}
-      api-key: ${AI_API_KEY}
-      chat:
-        options:
-          model: ${AI_CHAT_MODEL}
-      embedding:
-        options:
-          model: ${AI_EMBEDDING_MODEL}
-    vectorstore:
-      milvus:
-        host: ${MILVUS_HOST}
-        port: ${MILVUS_PORT}
-        collection-name: ${MILVUS_COLLECTION}
+agent:
+  model:
+    provider: ${AI_PROVIDER:mock}
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
+    chat-model: ${AI_CHAT_MODEL:}
+    embedding-model: ${AI_EMBEDDING_MODEL:}
+
+vector:
+  milvus:
+    enabled: ${VECTOR_MILVUS_ENABLED:false}
+    endpoint: ${VECTOR_MILVUS_ENDPOINT:http://localhost:19530}
+    collection-name: ${VECTOR_MILVUS_COLLECTION_NAME:kb_document_chunks}
+    dimension: ${VECTOR_MILVUS_DIMENSION:1536}
+    timeout: ${VECTOR_MILVUS_TIMEOUT:15}
 ```
 
 ## 11. 部署设计
@@ -1056,40 +1079,42 @@ spring:
 ```text
 app
 mysql
-milvus
-etcd
 minio
 ```
 
+当前 2c2g 线上服务器只运行 `app + mysql + minio + web`。Milvus/etcd 不在当前服务器部署，避免内存和 IO 压力导致 SSH、Docker 或业务入口卡死。
+
 MySQL 初始化：
 
-- 创建数据库 `aikb`。
+- 创建数据库 `kb_base_db`。
 - 执行业务表 DDL。
 - 初始化系统管理员和基础角色。
 
 Milvus 初始化：
 
-- 创建 collection：`aikb_document_chunks`。
+- 创建 collection：`kb_document_chunks`。
 - 向量维度必须与 `AI_EMBEDDING_MODEL` 输出维度一致。
 - metadata 字段至少包含 `space_id`、`document_id`、`chunk_id`、`file_name`、`page_number`、`chunk_index`。
-- 本地部署采用 Milvus standalone 模式，依赖 `etcd` 和对象存储；可复用当前 Compose 中的 MinIO，也可为 Milvus 单独配置 bucket。
+- 仅在 `VECTOR_MILVUS_ENABLED=true` 且独立 Milvus 服务可用时执行。
+- Milvus standalone 依赖 `etcd` 和对象存储。生产建议单独服务器，至少 `4c8g`，更推荐 `4c16g`。
 
 MinIO 初始化：
 
-- 创建 bucket：`aikb-documents`。
+- 创建 bucket：`agent-documents`。
 - bucket 不开放匿名访问。
 
 ### 11.2 启动顺序
 
 ```text
-mysql -> etcd -> minio -> milvus -> app
+mysql -> minio -> app -> web
 ```
 
 应用启动检查：
 
 - 数据库连接可用。
-- Milvus collection 可访问。
 - MinIO bucket 可访问。
+- `VECTOR_MILVUS_ENABLED=true` 时，Milvus collection 可访问。
+- `VECTOR_MILVUS_ENABLED=false` 时，应用不应连接 Milvus。
 - 模型配置存在。模型接口不可用时应用仍可启动，但问答和索引接口返回明确错误。
 
 ## 12. 可观测性设计

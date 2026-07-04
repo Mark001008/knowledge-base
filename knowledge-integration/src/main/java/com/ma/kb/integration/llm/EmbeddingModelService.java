@@ -43,7 +43,7 @@ public class EmbeddingModelService {
             @Value("${agent.model.base-url:}") String baseUrl,
             @Value("${agent.model.api-key:}") String apiKey,
             @Value("${agent.model.embedding-model:}") String embeddingModel,
-            @Value("${vector.milvus.dimension:1536}") int dimension,
+            @Value("${vector.dimension:${vector.milvus.dimension:1536}}") int dimension,
             @Value("${agent.model.timeout.connect:10}") int connectTimeoutSeconds,
             @Value("${agent.model.timeout.read:60}") int readTimeoutSeconds) {
         this.provider = provider;

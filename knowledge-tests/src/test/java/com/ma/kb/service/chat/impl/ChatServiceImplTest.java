@@ -4,6 +4,7 @@ import com.ma.kb.common.enums.ChatRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.core.chat.RagService;
+import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.chat.ChatManager;
 import com.ma.kb.manager.chat.bo.ChatMessageBO;
 import com.ma.kb.manager.chat.bo.ChatSessionBO;
@@ -31,6 +32,8 @@ class ChatServiceImplTest {
     @Mock
     private SpaceManager spaceManager;
     @Mock
+    private UserManager userManager;
+    @Mock
     private RagService ragService;
     @Mock
     private ChatDTOConverter chatDTOConverter;
@@ -43,7 +46,7 @@ class ChatServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        chatService = new ChatServiceImpl(chatManager, spaceManager, ragService, chatDTOConverter);
+        chatService = new ChatServiceImpl(chatManager, spaceManager, userManager, ragService, chatDTOConverter);
     }
 
     @Test

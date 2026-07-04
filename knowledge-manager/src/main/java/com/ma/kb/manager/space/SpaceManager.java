@@ -59,6 +59,14 @@ public class SpaceManager {
         return spaces.stream().map(spaceConverter::toBO).toList();
     }
 
+    public List<SpaceBO> listAll() {
+        List<SpaceDO> spaces = spaceMapper.selectList(
+                new LambdaQueryWrapper<SpaceDO>()
+                        .orderByDesc(SpaceDO::getUpdatedAt)
+        );
+        return spaces.stream().map(spaceConverter::toBO).toList();
+    }
+
     public void addMember(Long spaceId, Long userId, String role) {
         SpaceMemberBO memberBO = new SpaceMemberBO();
         memberBO.setSpaceId(spaceId);

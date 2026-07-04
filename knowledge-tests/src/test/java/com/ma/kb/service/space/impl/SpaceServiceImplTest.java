@@ -126,6 +126,7 @@ class SpaceServiceImplTest {
 
     @Test
     void addMemberSuccess() {
+        when(userManager.getById(OWNER_ID)).thenReturn(null);
         when(spaceManager.getMemberRole(SPACE_ID, OWNER_ID)).thenReturn(SpaceRoleEnum.OWNER.getCode());
 
         UserBO targetUser = new UserBO();
@@ -141,6 +142,7 @@ class SpaceServiceImplTest {
 
     @Test
     void addMemberAlreadyExists() {
+        when(userManager.getById(OWNER_ID)).thenReturn(null);
         when(spaceManager.getMemberRole(SPACE_ID, OWNER_ID)).thenReturn(SpaceRoleEnum.OWNER.getCode());
 
         UserBO targetUser = new UserBO();

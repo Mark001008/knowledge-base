@@ -2,6 +2,8 @@ package com.ma.kb.service.document;
 
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
+import com.ma.kb.service.document.dto.DocumentContentVO;
+import com.ma.kb.service.document.dto.OnlineDocumentRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -15,6 +17,21 @@ public interface DocumentService {
      * 上传文档
      */
     DocumentUploadResponse upload(Long userId, Long spaceId, MultipartFile file);
+
+    /**
+     * 创建在线文档
+     */
+    DocumentUploadResponse createOnlineDocument(Long userId, Long spaceId, OnlineDocumentRequest request);
+
+    /**
+     * 查询在线文档正文
+     */
+    DocumentContentVO getContent(Long userId, Long documentId);
+
+    /**
+     * 更新在线文档正文
+     */
+    DocumentUploadResponse updateContent(Long userId, Long documentId, OnlineDocumentRequest request);
 
     /**
      * 查询知识库文档列表

@@ -37,6 +37,11 @@ storage:
     bucket: kb-documents
 
 vector:
+  enabled: ${VECTOR_ENABLED:${VECTOR_MILVUS_ENABLED:false}}
+  provider: ${VECTOR_PROVIDER:milvus}
+  collection-name: ${VECTOR_COLLECTION_NAME:${VECTOR_MILVUS_COLLECTION_NAME:kb_document_chunks}}
+  dimension: ${VECTOR_DIMENSION:${VECTOR_MILVUS_DIMENSION:1536}}
+  timeout: ${VECTOR_TIMEOUT:${VECTOR_MILVUS_TIMEOUT:15}}
   milvus:
     enabled: ${VECTOR_MILVUS_ENABLED:false}
     endpoint: ${VECTOR_MILVUS_ENDPOINT:http://localhost:19530}
@@ -44,3 +49,6 @@ vector:
     collection-name: ${VECTOR_MILVUS_COLLECTION_NAME:kb_document_chunks}
     dimension: ${VECTOR_MILVUS_DIMENSION:1536}
     timeout: ${VECTOR_MILVUS_TIMEOUT:15}
+  qdrant:
+    endpoint: ${VECTOR_QDRANT_ENDPOINT:http://localhost:6333}
+    api-key: ${VECTOR_QDRANT_API_KEY:}

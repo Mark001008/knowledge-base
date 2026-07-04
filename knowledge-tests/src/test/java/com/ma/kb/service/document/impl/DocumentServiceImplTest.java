@@ -8,6 +8,7 @@ import com.ma.kb.integration.documentreader.PdfDocumentReader;
 import com.ma.kb.integration.documentreader.TxtDocumentReader;
 import com.ma.kb.integration.storage.StorageService;
 import com.ma.kb.integration.vector.VectorSearchService;
+import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.document.DocumentManager;
 import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
@@ -36,6 +37,8 @@ class DocumentServiceImplTest {
     @Mock
     private SpaceManager spaceManager;
     @Mock
+    private UserManager userManager;
+    @Mock
     private StorageService storageService;
     @Mock
     private DocumentDTOConverter documentDTOConverter;
@@ -61,6 +64,7 @@ class DocumentServiceImplTest {
         documentService = new DocumentServiceImpl(
                 documentManager,
                 spaceManager,
+                userManager,
                 storageService,
                 documentDTOConverter,
                 documentIngestionService,

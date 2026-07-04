@@ -12,6 +12,8 @@ import com.ma.kb.integration.storage.StorageService;
 import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.document.DocumentManager;
 import com.ma.kb.manager.document.bo.DocumentBO;
+import com.ma.kb.manager.auth.UserManager;
+import com.ma.kb.manager.auth.bo.UserBO;
 import com.ma.kb.manager.space.SpaceManager;
 import com.ma.kb.service.document.DocumentIngestionService;
 import com.ma.kb.service.document.DocumentService;
@@ -37,9 +39,11 @@ import java.util.UUID;
 public class DocumentServiceImpl implements DocumentService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentServiceImpl.class);
+    private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
 
     private final DocumentManager documentManager;
     private final SpaceManager spaceManager;
+    private final UserManager userManager;
     private final StorageService storageService;
     private final DocumentDTOConverter documentDTOConverter;
     private final DocumentIngestionService documentIngestionService;
@@ -48,7 +52,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final TxtDocumentReader txtDocumentReader;
     private final PdfDocumentReader pdfDocumentReader;
 
-    public DocumentServiceImpl(DocumentManager documentManager, SpaceManager spaceManager,
+    public DocumentServiceImpl(DocumentManager documentManager, SpaceManager spaceManager, UserManager userManager,
                                StorageService storageService, DocumentDTOConverter documentDTOConverter,
                                DocumentIngestionService documentIngestionService,
                                VectorSearchService vectorSearchService,
@@ -57,6 +61,7 @@ public class DocumentServiceImpl implements DocumentService {
                                PdfDocumentReader pdfDocumentReader) {
         this.documentManager = documentManager;
         this.spaceManager = spaceManager;
+        this.userManager = userManager;
         this.storageService = storageService;
         this.documentDTOConverter = documentDTOConverter;
         this.documentIngestionService = documentIngestionService;
@@ -228,6 +233,10 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private void checkSpaceAccess(Long userId, Long spaceId) {
+        if (isSystemAdmin(userId)) {
+            return;
+        }
+
         String role = spaceManager.getMemberRole(spaceId, userId);
         if (role == null) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
@@ -235,6 +244,10 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private void checkSpaceRole(Long userId, Long spaceId, SpaceRoleEnum minRole) {
+        if (isSystemAdmin(userId)) {
+            return;
+        }
+
         String role = spaceManager.getMemberRole(spaceId, userId);
         if (role == null) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
@@ -243,6 +256,11 @@ public class DocumentServiceImpl implements DocumentService {
         if (userRole.ordinal() > minRole.ordinal()) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
         }
+    }
+
+    private boolean isSystemAdmin(Long userId) {
+        UserBO user = userManager.getById(userId);
+        return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
     }
 
     private void uploadMarkdown(String bucket, String objectKey, byte[] contentBytes) {

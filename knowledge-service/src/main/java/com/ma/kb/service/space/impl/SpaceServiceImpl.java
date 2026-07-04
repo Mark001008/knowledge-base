@@ -26,6 +26,7 @@ import java.util.List;
 public class SpaceServiceImpl implements SpaceService {
 
     private static final Logger log = LoggerFactory.getLogger(SpaceServiceImpl.class);
+    private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
 
     private final SpaceManager spaceManager;
     private final UserManager userManager;
@@ -59,7 +60,9 @@ public class SpaceServiceImpl implements SpaceService {
 
     @Override
     public List<SpaceVO> listAccessible(Long userId) {
-        List<SpaceBO> spaces = spaceManager.listAccessible(userId);
+        List<SpaceBO> spaces = isSystemAdmin(userId)
+                ? spaceManager.listAll()
+                : spaceManager.listAccessible(userId);
         return spaces.stream().map(s -> toVO(s, null)).toList();
     }
 
@@ -155,6 +158,10 @@ public class SpaceServiceImpl implements SpaceService {
             throw new BusinessException(ErrorCode.SPACE_NOT_FOUND);
         }
 
+        if (isSystemAdmin(userId)) {
+            return space;
+        }
+
         String role = spaceManager.getMemberRole(spaceId, userId);
         if (role == null && !SpaceVisibilityEnum.INTERNAL.getCode().equals(space.getVisibility())) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
@@ -164,6 +171,10 @@ public class SpaceServiceImpl implements SpaceService {
     }
 
     private void checkRole(Long userId, Long spaceId, SpaceRoleEnum minRole) {
+        if (isSystemAdmin(userId)) {
+            return;
+        }
+
         String role = spaceManager.getMemberRole(spaceId, userId);
         if (role == null) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
@@ -183,5 +194,10 @@ public class SpaceServiceImpl implements SpaceService {
                 space.getChunkSize(), space.getChunkOverlap(),
                 documentCount, space.getCreatedAt(), space.getUpdatedAt()
         );
+    }
+
+    private boolean isSystemAdmin(Long userId) {
+        UserBO user = userManager.getById(userId);
+        return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
     }
 }

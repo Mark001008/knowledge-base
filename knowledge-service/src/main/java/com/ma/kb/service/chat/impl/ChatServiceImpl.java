@@ -4,6 +4,8 @@ import com.ma.kb.common.enums.ChatRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.core.chat.RagService;
+import com.ma.kb.manager.auth.UserManager;
+import com.ma.kb.manager.auth.bo.UserBO;
 import com.ma.kb.integration.vector.SearchResult;
 import com.ma.kb.manager.chat.ChatManager;
 import com.ma.kb.manager.chat.bo.AnswerCitationBO;
@@ -27,16 +29,19 @@ import java.util.List;
 public class ChatServiceImpl implements ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatServiceImpl.class);
+    private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
 
     private final ChatManager chatManager;
     private final SpaceManager spaceManager;
+    private final UserManager userManager;
     private final RagService ragService;
     private final ChatDTOConverter chatDTOConverter;
 
-    public ChatServiceImpl(ChatManager chatManager, SpaceManager spaceManager,
+    public ChatServiceImpl(ChatManager chatManager, SpaceManager spaceManager, UserManager userManager,
                            RagService ragService, ChatDTOConverter chatDTOConverter) {
         this.chatManager = chatManager;
         this.spaceManager = spaceManager;
+        this.userManager = userManager;
         this.ragService = ragService;
         this.chatDTOConverter = chatDTOConverter;
     }
@@ -59,7 +64,9 @@ public class ChatServiceImpl implements ChatService {
     public List<ChatSessionVO> listSessions(Long userId, Long spaceId) {
         checkSpaceAccess(userId, spaceId);
 
-        List<ChatSessionBO> sessions = chatManager.listSessionsBySpaceIdAndUserId(spaceId, userId);
+        List<ChatSessionBO> sessions = isSystemAdmin(userId)
+                ? chatManager.listSessionsBySpaceId(spaceId)
+                : chatManager.listSessionsBySpaceIdAndUserId(spaceId, userId);
         return sessions.stream()
                 .map(s -> new ChatSessionVO(s.getId(), s.getSpaceId(),
                         s.getTitle(), s.getCreatedAt(), s.getUpdatedAt()))
@@ -165,9 +172,18 @@ public class ChatServiceImpl implements ChatService {
     // ==================== 私有方法 ====================
 
     private void checkSpaceAccess(Long userId, Long spaceId) {
+        if (isSystemAdmin(userId)) {
+            return;
+        }
+
         String role = spaceManager.getMemberRole(spaceId, userId);
         if (role == null) {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED);
         }
+    }
+
+    private boolean isSystemAdmin(Long userId) {
+        UserBO user = userManager.getById(userId);
+        return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
     }
 }

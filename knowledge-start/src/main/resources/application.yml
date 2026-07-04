@@ -8,7 +8,9 @@ spring:
       connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:5000}
       validation-timeout: ${SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT:3000}
       idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:300000}
-      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:1800000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:600000}
+      connection-test-query: SELECT 1
+      leak-detection-threshold: 60000
 
 server:
   port: 8080
@@ -23,6 +25,10 @@ mybatis-plus:
 jwt:
   secret: dGhpc0lzQVZlcnlMb25nQW5kU2VjdXJlS2V5Rm9ySldUU2lnbmluZzIwMjQ=
   expires-in: 7200
+
+agent:
+  jwt:
+    secret: dGhpc0lzQVZlcnlMb25nQW5kU2VjdXJlS2V5Rm9ySldUU2lnbmluZzIwMjQ=
 
 storage:
   type: local

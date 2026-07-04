@@ -83,4 +83,29 @@ public class ChatManager {
         List<AnswerCitationDO> citations = citationMapper.selectByMessageId(messageId);
         return citations.stream().map(chatConverter::toCitationBO).toList();
     }
+
+    public void updateSessionTitle(Long sessionId, String title) {
+        ChatSessionDO sessionDO = sessionMapper.selectById(sessionId);
+        if (sessionDO != null) {
+            sessionDO.setTitle(title);
+            sessionMapper.updateById(sessionDO);
+        }
+    }
+
+    public void deleteSession(Long sessionId) {
+        // 先删除关联的消息和引用
+        List<ChatMessageDO> messages = messageMapper.selectList(
+                new LambdaQueryWrapper<ChatMessageDO>()
+                        .eq(ChatMessageDO::getSessionId, sessionId)
+        );
+        for (ChatMessageDO message : messages) {
+            citationMapper.deleteByMessageId(message.getId());
+        }
+        messageMapper.delete(
+                new LambdaQueryWrapper<ChatMessageDO>()
+                        .eq(ChatMessageDO::getSessionId, sessionId)
+        );
+        // 删除会话
+        sessionMapper.deleteById(sessionId);
+    }
 }

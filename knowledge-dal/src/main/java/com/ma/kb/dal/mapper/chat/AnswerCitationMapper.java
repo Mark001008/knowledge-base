@@ -17,4 +17,9 @@ public interface AnswerCitationMapper extends BaseMapper<AnswerCitationDO> {
      * 根据消息ID查询引用列表
      */
     List<AnswerCitationDO> selectByMessageId(@Param("messageId") Long messageId);
+
+    /**
+     * 根据消息ID删除引用
+     */
+    int deleteByMessageId(@Param("messageId") Long messageId);
 }

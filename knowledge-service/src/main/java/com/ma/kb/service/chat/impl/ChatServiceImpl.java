@@ -138,6 +138,30 @@ public class ChatServiceImpl implements ChatService {
         return result;
     }
 
+    @Override
+    public void updateSession(Long userId, Long sessionId, String title) {
+        ChatSessionBO session = chatManager.getSessionById(sessionId);
+        if (session == null) {
+            throw new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND);
+        }
+        checkSpaceAccess(userId, session.getSpaceId());
+
+        chatManager.updateSessionTitle(sessionId, title);
+        log.info("会话重命名成功: sessionId={}, newTitle={}", sessionId, title);
+    }
+
+    @Override
+    public void deleteSession(Long userId, Long sessionId) {
+        ChatSessionBO session = chatManager.getSessionById(sessionId);
+        if (session == null) {
+            throw new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND);
+        }
+        checkSpaceAccess(userId, session.getSpaceId());
+
+        chatManager.deleteSession(sessionId);
+        log.info("会话删除成功: sessionId={}", sessionId);
+    }
+
     // ==================== 私有方法 ====================
 
     private void checkSpaceAccess(Long userId, Long spaceId) {

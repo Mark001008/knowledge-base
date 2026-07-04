@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ma.kb.dal.mapper.auth.PermissionMapper">
+
+    <!-- 根据角色ID查询权限列表 -->
+    <select id="selectByRoleId" resultType="com.ma.kb.dal.model.auth.PermissionDO">
+        SELECT p.id,
+               p.permission_code AS permissionCode,
+               p.permission_name AS permissionName,
+               p.module,
+               p.description,
+               p.status,
+               p.created_at AS createdAt,
+               p.updated_at AS updatedAt
+        FROM sys_permission p
+        INNER JOIN sys_role_permission rp ON rp.permission_id = p.id
+        WHERE rp.role_id = #{roleId}
+          AND p.status = 'ENABLED'
+    </select>
+
+    <!-- 根据用户ID查询权限编码列表 -->
+    <select id="selectPermissionCodesByUserId" resultType="java.lang.String">
+        SELECT DISTINCT p.permission_code
+        FROM sys_permission p
+        INNER JOIN sys_role_permission rp ON rp.permission_id = p.id
+        INNER JOIN sys_user_role ur ON ur.role_id = rp.role_id
+        WHERE ur.user_id = #{userId}
+          AND p.status = 'ENABLED'
+    </select>
+
+    <!-- 根据权限编码查询权限 -->
+    <select id="selectByPermissionCode" resultType="com.ma.kb.dal.model.auth.PermissionDO">
+        SELECT id,
+               permission_code AS permissionCode,
+               permission_name AS permissionName,
+               module,
+               description,
+               status,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM sys_permission
+        WHERE permission_code = #{permissionCode}
+    </select>
+
+</mapper>

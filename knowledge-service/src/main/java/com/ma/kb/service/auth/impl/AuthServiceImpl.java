@@ -10,11 +10,18 @@ import com.ma.kb.service.auth.AuthService;
 import com.ma.kb.service.auth.converter.UserDTOConverter;
 import com.ma.kb.service.auth.dto.LoginRequest;
 import com.ma.kb.service.auth.dto.LoginResponse;
+import com.ma.kb.service.auth.dto.MenuDTO;
+import com.ma.kb.service.auth.dto.RoleDTO;
 import com.ma.kb.service.auth.dto.UserInfoDTO;
+import com.ma.kb.service.system.MenuService;
+import com.ma.kb.service.system.PermissionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 认证服务实现
@@ -28,13 +35,18 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final UserDTOConverter userDTOConverter;
+    private final PermissionService permissionService;
+    private final MenuService menuService;
 
     public AuthServiceImpl(UserManager userManager, PasswordEncoder passwordEncoder,
-                           JwtService jwtService, UserDTOConverter userDTOConverter) {
+                           JwtService jwtService, UserDTOConverter userDTOConverter,
+                           PermissionService permissionService, MenuService menuService) {
         this.userManager = userManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.userDTOConverter = userDTOConverter;
+        this.permissionService = permissionService;
+        this.menuService = menuService;
     }
 
     @Override
@@ -61,11 +73,17 @@ public class AuthServiceImpl implements AuthService {
         // 生成 Token
         String accessToken = jwtService.generateToken(userBO.getId(), userBO.getUsername(), userBO.getRoles());
 
-        // 构建响应
-        UserInfoDTO userInfo = userDTOConverter.toUserInfoDTO(userBO);
+        // 查询权限码
+        List<String> permissions = permissionService.getCurrentUserPermissionCodes(userBO.getId());
+
+        // 查询菜单树
+        List<MenuDTO> menus = menuService.getCurrentUserMenus(userBO.getId());
+
+        // 构建用户信息
+        UserInfoDTO userInfo = convertToUserInfoDTO(userBO);
 
         log.info("用户登录成功: {}", request.username());
-        return new LoginResponse(accessToken, jwtService.getExpiresIn(), userInfo);
+        return new LoginResponse(accessToken, jwtService.getExpiresIn(), userInfo, permissions, menus);
     }
 
     @Override
@@ -81,6 +99,20 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        return userDTOConverter.toUserInfoDTO(userBO);
+        return convertToUserInfoDTO(userBO);
+    }
+
+    private UserInfoDTO convertToUserInfoDTO(UserBO userBO) {
+        List<RoleDTO> roles = userBO.getRoles() != null ?
+                userBO.getRoles().stream()
+                        .map(roleCode -> new RoleDTO(null, roleCode, roleCode))
+                        .collect(Collectors.toList()) :
+                List.of();
+        return new UserInfoDTO(
+                userBO.getId(),
+                userBO.getUsername(),
+                userBO.getDisplayName(),
+                roles
+        );
     }
 }

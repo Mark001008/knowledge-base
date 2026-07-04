@@ -9,6 +9,6 @@ public record UserInfoDTO(
         Long id,
         String username,
         String displayName,
-        List<String> roles
+        List<RoleDTO> roles
 ) {
 }

@@ -42,6 +42,16 @@ public enum ErrorCode {
     CHAT_SESSION_NOT_FOUND(40500, "会话不存在"),
     CHAT_SESSION_ACCESS_DENIED(40501, "无权访问该会话"),
 
+    // 权限管理 40600-40699
+    PERMISSION_NOT_FOUND(40600, "权限不存在"),
+    PERMISSION_CODE_EXISTS(40601, "权限编码已存在"),
+    MENU_NOT_FOUND(40602, "菜单不存在"),
+    ROLE_NOT_FOUND(40603, "角色不存在"),
+    ROLE_BUILTIN_CANNOT_DELETE(40604, "内置角色不能删除"),
+    USER_BUILTIN_CANNOT_DELETE(40605, "内置用户不能删除"),
+    USER_CANNOT_DISABLE_SELF(40606, "不能禁用当前登录用户"),
+    ROLE_HAS_USERS(40607, "角色下还有用户，不能删除"),
+
     // 系统异常 50000-50099
     INTERNAL_ERROR(50000, "系统内部错误"),
     DATABASE_ERROR(50001, "数据库错误");

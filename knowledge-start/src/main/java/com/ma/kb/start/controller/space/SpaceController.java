@@ -2,6 +2,7 @@ package com.ma.kb.start.controller.space;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.space.SpaceService;
 import com.ma.kb.service.space.dto.*;
@@ -29,6 +30,7 @@ public class SpaceController {
      * 创建知识库
      */
     @PostMapping
+    @RequirePermission("space:create")
     public ApiResponse<SpaceVO> create(HttpServletRequest request,
                                        @RequestBody SpaceCreateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -40,6 +42,7 @@ public class SpaceController {
      * 查询知识库列表
      */
     @GetMapping
+    @RequirePermission("space:view")
     public ApiResponse<List<SpaceVO>> list(HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<SpaceVO> spaces = spaceService.listAccessible(userId);
@@ -50,6 +53,7 @@ public class SpaceController {
      * 查询知识库详情
      */
     @GetMapping("/{id}")
+    @RequirePermission("space:view")
     public ApiResponse<SpaceVO> getById(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.getById(userId, id);
@@ -60,6 +64,7 @@ public class SpaceController {
      * 更新知识库
      */
     @PutMapping("/{id}")
+    @RequirePermission("space:update")
     public ApiResponse<SpaceVO> update(HttpServletRequest request, @PathVariable Long id,
                                        @RequestBody SpaceUpdateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -71,6 +76,7 @@ public class SpaceController {
      * 删除知识库
      */
     @DeleteMapping("/{id}")
+    @RequirePermission("space:delete")
     public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         spaceService.delete(userId, id);
@@ -81,6 +87,7 @@ public class SpaceController {
      * 添加知识库成员
      */
     @PostMapping("/{id}/members")
+    @RequirePermission("member:add")
     public ApiResponse<Void> addMember(HttpServletRequest request, @PathVariable Long id,
                                        @RequestBody SpaceMemberRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -92,6 +99,7 @@ public class SpaceController {
      * 查询知识库成员列表
      */
     @GetMapping("/{id}/members")
+    @RequirePermission("member:view")
     public ApiResponse<List<SpaceMemberVO>> listMembers(HttpServletRequest request,
                                                         @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -103,6 +111,7 @@ public class SpaceController {
      * 移除知识库成员
      */
     @DeleteMapping("/{id}/members/{memberId}")
+    @RequirePermission("member:remove")
     public ApiResponse<Void> removeMember(HttpServletRequest request,
                                           @PathVariable Long id,
                                           @PathVariable Long memberId) {

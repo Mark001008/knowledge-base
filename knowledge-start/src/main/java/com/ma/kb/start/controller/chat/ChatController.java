@@ -2,6 +2,7 @@ package com.ma.kb.start.controller.chat;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.chat.ChatService;
 import com.ma.kb.service.chat.dto.*;
@@ -29,6 +30,7 @@ public class ChatController {
      * 创建会话
      */
     @PostMapping("/spaces/{spaceId}/chat/sessions")
+    @RequirePermission("qa:view")
     public ApiResponse<ChatSessionVO> createSession(HttpServletRequest request,
                                                     @PathVariable Long spaceId,
                                                     @RequestBody ChatSessionCreateRequest body) {
@@ -41,6 +43,7 @@ public class ChatController {
      * 查询会话列表
      */
     @GetMapping("/spaces/{spaceId}/chat/sessions")
+    @RequirePermission("qa:view")
     public ApiResponse<List<ChatSessionVO>> listSessions(HttpServletRequest request,
                                                          @PathVariable Long spaceId) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -52,6 +55,7 @@ public class ChatController {
      * 发送问题
      */
     @PostMapping("/chat/sessions/{sessionId}/messages")
+    @RequirePermission("qa:ask")
     public ApiResponse<ChatMessageResponse> sendMessage(HttpServletRequest request,
                                                         @PathVariable Long sessionId,
                                                         @RequestBody ChatMessageRequest body) {
@@ -64,6 +68,7 @@ public class ChatController {
      * 查询会话消息列表
      */
     @GetMapping("/chat/sessions/{sessionId}/messages")
+    @RequirePermission("qa:view")
     public ApiResponse<List<ChatMessageVO>> listMessages(HttpServletRequest request,
                                                          @PathVariable Long sessionId) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);

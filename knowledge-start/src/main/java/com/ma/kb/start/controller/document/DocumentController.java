@@ -2,6 +2,7 @@ package com.ma.kb.start.controller.document;
 
 import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.document.DocumentService;
 import com.ma.kb.service.document.dto.DocumentContentVO;
@@ -33,6 +34,7 @@ public class DocumentController {
      * 上传文档
      */
     @PostMapping("/spaces/{spaceId}/documents")
+    @RequirePermission("document:upload")
     public ApiResponse<DocumentUploadResponse> upload(HttpServletRequest request,
                                                       @PathVariable Long spaceId,
                                                       @RequestParam("file") MultipartFile file) {
@@ -45,6 +47,7 @@ public class DocumentController {
      * 创建在线文档
      */
     @PostMapping("/spaces/{spaceId}/documents/online")
+    @RequirePermission("document:create")
     public ApiResponse<DocumentUploadResponse> createOnlineDocument(HttpServletRequest request,
                                                                     @PathVariable Long spaceId,
                                                                     @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
@@ -57,6 +60,7 @@ public class DocumentController {
      * 查询知识库文档列表
      */
     @GetMapping("/spaces/{spaceId}/documents")
+    @RequirePermission("document:view")
     public ApiResponse<List<DocumentVO>> listBySpaceId(HttpServletRequest request,
                                                        @PathVariable Long spaceId) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
@@ -68,6 +72,7 @@ public class DocumentController {
      * 查询文档详情
      */
     @GetMapping("/documents/{id}")
+    @RequirePermission("document:view")
     public ApiResponse<DocumentVO> getById(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentVO doc = documentService.getById(userId, id);
@@ -78,6 +83,7 @@ public class DocumentController {
      * 查询在线文档正文
      */
     @GetMapping("/documents/{id}/content")
+    @RequirePermission("document:view")
     public ApiResponse<DocumentContentVO> getContent(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentContentVO content = documentService.getContent(userId, id);
@@ -88,6 +94,7 @@ public class DocumentController {
      * 更新在线文档正文
      */
     @PutMapping("/documents/{id}/content")
+    @RequirePermission("document:update")
     public ApiResponse<DocumentUploadResponse> updateContent(HttpServletRequest request,
                                                              @PathVariable Long id,
                                                              @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
@@ -100,6 +107,7 @@ public class DocumentController {
      * 删除文档
      */
     @DeleteMapping("/documents/{id}")
+    @RequirePermission("document:delete")
     public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         documentService.delete(userId, id);
@@ -110,6 +118,7 @@ public class DocumentController {
      * 重建索引
      */
     @PostMapping("/documents/{id}/reindex")
+    @RequirePermission("document:rebuild")
     public ApiResponse<Void> reindex(HttpServletRequest request, @PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         documentService.reindex(userId, id);

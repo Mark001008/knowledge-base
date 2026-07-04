@@ -6,17 +6,17 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
 
 /**
- * 角色数据对象
+ * 权限数据对象
  */
-@TableName("sys_role")
-public class RoleDO {
+@TableName("sys_permission")
+public class PermissionDO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String roleCode;
-    private String roleName;
+    private String permissionCode;
+    private String permissionName;
+    private String module;
     private String description;
-    private Integer builtin;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -29,20 +29,28 @@ public class RoleDO {
         this.id = id;
     }
 
-    public String getRoleCode() {
-        return roleCode;
+    public String getPermissionCode() {
+        return permissionCode;
     }
 
-    public void setRoleCode(String roleCode) {
-        this.roleCode = roleCode;
+    public void setPermissionCode(String permissionCode) {
+        this.permissionCode = permissionCode;
     }
 
-    public String getRoleName() {
-        return roleName;
+    public String getPermissionName() {
+        return permissionName;
     }
 
-    public void setRoleName(String roleName) {
-        this.roleName = roleName;
+    public void setPermissionName(String permissionName) {
+        this.permissionName = permissionName;
+    }
+
+    public String getModule() {
+        return module;
+    }
+
+    public void setModule(String module) {
+        this.module = module;
     }
 
     public String getDescription() {
@@ -51,14 +59,6 @@ public class RoleDO {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public Integer getBuiltin() {
-        return builtin;
-    }
-
-    public void setBuiltin(Integer builtin) {
-        this.builtin = builtin;
     }
 
     public String getStatus() {

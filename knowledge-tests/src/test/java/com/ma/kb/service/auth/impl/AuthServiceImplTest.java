@@ -9,7 +9,11 @@ import com.ma.kb.manager.auth.bo.UserBO;
 import com.ma.kb.service.auth.converter.UserDTOConverter;
 import com.ma.kb.service.auth.dto.LoginRequest;
 import com.ma.kb.service.auth.dto.LoginResponse;
+import com.ma.kb.service.auth.dto.MenuDTO;
+import com.ma.kb.service.auth.dto.RoleDTO;
 import com.ma.kb.service.auth.dto.UserInfoDTO;
+import com.ma.kb.service.system.MenuService;
+import com.ma.kb.service.system.PermissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,12 +37,16 @@ class AuthServiceImplTest {
     private JwtService jwtService;
     @Mock
     private UserDTOConverter userDTOConverter;
+    @Mock
+    private PermissionService permissionService;
+    @Mock
+    private MenuService menuService;
 
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(userManager, passwordEncoder, jwtService, userDTOConverter);
+        authService = new AuthServiceImpl(userManager, passwordEncoder, jwtService, userDTOConverter, permissionService, menuService);
     }
 
     // ==================== login ====================
@@ -47,13 +55,15 @@ class AuthServiceImplTest {
     void loginSuccess() {
         LoginRequest request = new LoginRequest("admin", "password123");
         UserBO userBO = buildUserBO(1L, "admin", UserStatusEnum.ENABLED.getCode());
-        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of("ROLE_ADMIN"));
+        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of(new RoleDTO(1L, "SYSTEM_ADMIN", "系统管理员")));
 
         when(userManager.getByUsername("admin")).thenReturn(userBO);
         when(passwordEncoder.matches("password123", "$2a$10$encoded")).thenReturn(true);
-        when(jwtService.generateToken(1L, "admin", List.of("ROLE_ADMIN"))).thenReturn("access-token");
+        when(jwtService.generateToken(1L, "admin", List.of("SYSTEM_ADMIN"))).thenReturn("access-token");
         when(jwtService.getExpiresIn()).thenReturn(7200L);
         when(userDTOConverter.toUserInfoDTO(userBO)).thenReturn(userInfoDTO);
+        when(permissionService.getCurrentUserPermissionCodes(1L)).thenReturn(List.of("space:view", "space:create"));
+        when(menuService.getCurrentUserMenus(1L)).thenReturn(List.of());
 
         LoginResponse response = authService.login(request);
 
@@ -107,7 +117,7 @@ class AuthServiceImplTest {
     void getCurrentUserSuccess() {
         String token = "valid-token";
         UserBO userBO = buildUserBO(1L, "admin", UserStatusEnum.ENABLED.getCode());
-        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of("ROLE_ADMIN"));
+        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of(new RoleDTO(1L, "SYSTEM_ADMIN", "系统管理员")));
 
         when(jwtService.validateToken(token)).thenReturn(true);
         when(jwtService.getUserId(token)).thenReturn(1L);

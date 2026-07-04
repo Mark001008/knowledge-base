@@ -75,4 +75,29 @@ public class ChatController {
         List<ChatMessageVO> messages = chatService.listMessages(userId, sessionId);
         return ApiResponse.success(messages);
     }
+
+    /**
+     * 更新会话（重命名）
+     */
+    @PutMapping("/chat/sessions/{sessionId}")
+    @RequirePermission("qa:view")
+    public ApiResponse<Void> updateSession(HttpServletRequest request,
+                                           @PathVariable Long sessionId,
+                                           @RequestBody ChatSessionUpdateRequest body) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        chatService.updateSession(userId, sessionId, body.title());
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 删除会话
+     */
+    @DeleteMapping("/chat/sessions/{sessionId}")
+    @RequirePermission("qa:view")
+    public ApiResponse<Void> deleteSession(HttpServletRequest request,
+                                           @PathVariable Long sessionId) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        chatService.deleteSession(userId, sessionId);
+        return ApiResponse.success(null);
+    }
 }

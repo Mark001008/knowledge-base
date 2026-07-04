@@ -28,4 +28,14 @@ public interface ChatService {
      * 查询会话消息列表
      */
     List<ChatMessageVO> listMessages(Long userId, Long sessionId);
+
+    /**
+     * 更新会话（重命名）
+     */
+    void updateSession(Long userId, Long sessionId, String title);
+
+    /**
+     * 删除会话
+     */
+    void deleteSession(Long userId, Long sessionId);
 }

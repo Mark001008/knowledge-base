@@ -11,4 +11,10 @@
         ORDER BY c.score DESC
     </select>
 
+    <!-- 根据消息ID删除引用 -->
+    <delete id="deleteByMessageId">
+        DELETE FROM kb_answer_citation
+        WHERE message_id = #{messageId}
+    </delete>
+
 </mapper>

@@ -10,6 +10,7 @@ import com.ma.kb.manager.document.bo.DocumentChunkBO;
 import com.ma.kb.manager.document.converter.DocumentConverter;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -82,5 +83,41 @@ public class DocumentManager {
 
     public void deleteChunksByDocumentId(Long documentId) {
         documentChunkMapper.deleteByDocumentId(documentId);
+    }
+
+    public List<DocumentChunkBO> searchChunksByKeywords(Long spaceId, List<String> keywords, int limit) {
+        if (spaceId == null || keywords == null || keywords.isEmpty() || limit <= 0) {
+            return List.of();
+        }
+        List<String> normalizedKeywords = keywords.stream()
+                .filter(keyword -> keyword != null && !keyword.isBlank())
+                .map(String::trim)
+                .distinct()
+                .limit(12)
+                .toList();
+        if (normalizedKeywords.isEmpty()) {
+            return List.of();
+        }
+
+        LambdaQueryWrapper<DocumentChunkDO> wrapper = new LambdaQueryWrapper<DocumentChunkDO>()
+                .eq(DocumentChunkDO::getSpaceId, spaceId)
+                .and(query -> {
+                    for (int i = 0; i < normalizedKeywords.size(); i++) {
+                        String keyword = normalizedKeywords.get(i);
+                        if (i == 0) {
+                            query.like(DocumentChunkDO::getContent, keyword);
+                        } else {
+                            query.or().like(DocumentChunkDO::getContent, keyword);
+                        }
+                    }
+                })
+                .last("LIMIT " + limit);
+
+        List<DocumentChunkDO> chunks = documentChunkMapper.selectList(wrapper);
+        List<DocumentChunkBO> results = new ArrayList<>(chunks.size());
+        for (DocumentChunkDO chunk : chunks) {
+            results.add(documentConverter.toChunkBO(chunk));
+        }
+        return results;
     }
 }

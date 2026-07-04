@@ -21,4 +21,6 @@ public interface DocumentConverter {
 
     @Mapping(target = "createdAt", ignore = true)
     DocumentChunkDO toChunkDO(DocumentChunkBO chunkBO);
+
+    DocumentChunkBO toChunkBO(DocumentChunkDO chunkDO);
 }

@@ -3,6 +3,9 @@ package com.ma.kb.service.document.impl;
 import com.ma.kb.common.enums.DocumentStatusEnum;
 import com.ma.kb.common.enums.SpaceRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
+import com.ma.kb.integration.documentreader.MarkdownDocumentReader;
+import com.ma.kb.integration.documentreader.PdfDocumentReader;
+import com.ma.kb.integration.documentreader.TxtDocumentReader;
 import com.ma.kb.integration.storage.StorageService;
 import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.document.DocumentManager;
@@ -40,6 +43,12 @@ class DocumentServiceImplTest {
     private DocumentIngestionService documentIngestionService;
     @Mock
     private VectorSearchService vectorSearchService;
+    @Mock
+    private MarkdownDocumentReader markdownDocumentReader;
+    @Mock
+    private TxtDocumentReader txtDocumentReader;
+    @Mock
+    private PdfDocumentReader pdfDocumentReader;
 
     private DocumentServiceImpl documentService;
 
@@ -55,7 +64,10 @@ class DocumentServiceImplTest {
                 storageService,
                 documentDTOConverter,
                 documentIngestionService,
-                vectorSearchService
+                vectorSearchService,
+                markdownDocumentReader,
+                txtDocumentReader,
+                pdfDocumentReader
         );
     }
 

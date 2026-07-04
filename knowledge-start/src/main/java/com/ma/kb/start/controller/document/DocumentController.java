@@ -4,8 +4,10 @@ import com.ma.kb.common.response.ApiResponse;
 import com.ma.kb.core.auth.JwtService;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.document.DocumentService;
+import com.ma.kb.service.document.dto.DocumentContentVO;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
+import com.ma.kb.service.document.dto.OnlineDocumentRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,6 +42,18 @@ public class DocumentController {
     }
 
     /**
+     * 创建在线文档
+     */
+    @PostMapping("/spaces/{spaceId}/documents/online")
+    public ApiResponse<DocumentUploadResponse> createOnlineDocument(HttpServletRequest request,
+                                                                    @PathVariable Long spaceId,
+                                                                    @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        DocumentUploadResponse response = documentService.createOnlineDocument(userId, spaceId, onlineDocumentRequest);
+        return ApiResponse.success(response);
+    }
+
+    /**
      * 查询知识库文档列表
      */
     @GetMapping("/spaces/{spaceId}/documents")
@@ -58,6 +72,28 @@ public class DocumentController {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentVO doc = documentService.getById(userId, id);
         return ApiResponse.success(doc);
+    }
+
+    /**
+     * 查询在线文档正文
+     */
+    @GetMapping("/documents/{id}/content")
+    public ApiResponse<DocumentContentVO> getContent(HttpServletRequest request, @PathVariable Long id) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        DocumentContentVO content = documentService.getContent(userId, id);
+        return ApiResponse.success(content);
+    }
+
+    /**
+     * 更新在线文档正文
+     */
+    @PutMapping("/documents/{id}/content")
+    public ApiResponse<DocumentUploadResponse> updateContent(HttpServletRequest request,
+                                                             @PathVariable Long id,
+                                                             @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        DocumentUploadResponse response = documentService.updateContent(userId, id, onlineDocumentRequest);
+        return ApiResponse.success(response);
     }
 
     /**

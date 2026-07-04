@@ -154,6 +154,7 @@ class DocumentServiceImplTest {
 
         documentService.reindex(USER_ID, DOC_ID);
 
+        verify(vectorSearchService).deleteByDocumentId(DOC_ID);
         verify(documentManager).deleteChunksByDocumentId(DOC_ID);
         verify(documentManager).update(any(DocumentBO.class));
         verify(documentIngestionService).ingest(DOC_ID);

@@ -96,6 +96,10 @@ public class VectorSearchService {
         return searchMilvus(queryEmbedding, spaceId, topK, threshold);
     }
 
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     private List<SearchResult> searchMilvus(float[] queryEmbedding, Long spaceId, int topK,
                                             BigDecimal threshold) {
         ensureCollectionReady();

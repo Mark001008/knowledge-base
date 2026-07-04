@@ -43,9 +43,13 @@ public class PromptBuilder {
         for (int i = 0; i < results.size(); i++) {
             SearchResult result = results.get(i);
             sb.append(String.format("[引用%d] 文档：%s", i + 1, result.getDocumentName()));
-	        sb.append(String.format("，页码：%d", result.getPageNumber()));
-	        sb.append(String.format("，分片：%d", result.getChunkIndex()));
-	        sb.append("\n");
+            if (result.getPageNumber() != null && result.getPageNumber() > 0) {
+                sb.append(String.format("，页码：%d", result.getPageNumber()));
+            }
+            if (result.getChunkIndex() != null) {
+                sb.append(String.format("，分片：%d", result.getChunkIndex()));
+            }
+            sb.append("\n");
             sb.append(result.getContent());
             sb.append("\n\n");
         }

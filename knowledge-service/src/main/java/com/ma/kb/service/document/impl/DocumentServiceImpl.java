@@ -202,6 +202,11 @@ public class DocumentServiceImpl implements DocumentService {
         DocumentBO document = getAndCheckAccess(userId, documentId);
         checkSpaceRole(userId, document.getSpaceId(), SpaceRoleEnum.ADMIN);
 
+        try {
+            vectorSearchService.deleteByDocumentId(documentId);
+        } catch (Exception e) {
+            log.warn("重建文档时删除旧向量失败，继续重建: id={}", documentId, e);
+        }
         documentManager.deleteChunksByDocumentId(documentId);
 
         DocumentBO reindexBO = documentDTOConverter.toReindexBO(documentId);

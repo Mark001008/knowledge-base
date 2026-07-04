@@ -49,6 +49,12 @@ public class RagService {
         BigDecimal threshold = space != null ? space.getSimilarityThreshold()
                 : new BigDecimal("0.7");
 
+        if (!vectorSearchService.isEnabled()) {
+            log.info("RAG 问答: spaceId={}, 向量库未启用, 返回固定回答", spaceId);
+            return new RagResult(promptBuilder.buildNoContextAnswer(), List.of(), "none",
+                    0, 0, System.currentTimeMillis() - startTime);
+        }
+
         // 2. 生成问题向量
         float[] queryEmbedding = vectorSearchService.embed(question);
 

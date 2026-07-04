@@ -68,6 +68,7 @@ public class DocumentIngestionService {
         }
         try {
             updateStatus(document, DocumentStatusEnum.PARSING, null);
+            clearExistingIndex(document.getId());
             String rawText = readText(document);
             String cleanedText = textCleaner.clean(rawText);
             if (cleanedText.isBlank()) {
@@ -83,35 +84,56 @@ public class DocumentIngestionService {
             }
 
             updateStatus(document, DocumentStatusEnum.INDEXING, null);
-            vectorSearchService.deleteByDocumentId(document.getId());
-            documentManager.deleteChunksByDocumentId(document.getId());
-
             List<DocumentChunkBO> chunks = buildChunks(document, texts);
             documentManager.saveChunks(chunks);
-            for (DocumentChunkBO chunk : chunks) {
-                float[] embedding = vectorSearchService.embed(chunk.getContent());
-                String vectorId = vectorSearchService.store(
-                        chunk.getId(),
-                        chunk.getSpaceId(),
-                        chunk.getDocumentId(),
-                        chunk.getContent(),
-                        embedding,
-                        Map.of(
-                                "documentName", document.getFileName(),
-                                "chunkIndex", chunk.getChunkIndex(),
-                                "pageNumber", chunk.getPageNumber() == null ? 0 : chunk.getPageNumber()
-                        )
-                );
-                chunk.setVectorId(vectorId);
-                documentManager.updateChunk(chunk);
+            if (vectorSearchService.isEnabled()) {
+                for (DocumentChunkBO chunk : chunks) {
+                    float[] embedding = vectorSearchService.embed(chunk.getContent());
+                    String vectorId = vectorSearchService.store(
+                            chunk.getId(),
+                            chunk.getSpaceId(),
+                            chunk.getDocumentId(),
+                            chunk.getContent(),
+                            embedding,
+                            Map.of(
+                                    "documentName", document.getFileName(),
+                                    "chunkIndex", chunk.getChunkIndex(),
+                                    "pageNumber", chunk.getPageNumber() == null ? 0 : chunk.getPageNumber()
+                            )
+                    );
+                    chunk.setVectorId(vectorId);
+                    documentManager.updateChunk(chunk);
+                }
+            } else {
+                log.info("向量库未启用，文档仅完成解析、切片和分片落库: documentId={}, chunks={}",
+                        document.getId(), chunks.size());
             }
 
             updateStatus(document, DocumentStatusEnum.COMPLETED, null);
             log.info("文档入库完成: documentId={}, chunks={}", document.getId(), chunks.size());
         } catch (Exception e) {
             log.error("文档入库失败: documentId={}", document.getId(), e);
+            clearPartialIndex(document.getId());
             updateStatus(document, DocumentStatusEnum.FAILED, e.getMessage());
         }
+    }
+
+    private void clearExistingIndex(Long documentId) {
+        try {
+            vectorSearchService.deleteByDocumentId(documentId);
+        } catch (Exception e) {
+            log.warn("清理旧向量失败，继续重建: documentId={}", documentId, e);
+        }
+        documentManager.deleteChunksByDocumentId(documentId);
+    }
+
+    private void clearPartialIndex(Long documentId) {
+        try {
+            vectorSearchService.deleteByDocumentId(documentId);
+        } catch (Exception e) {
+            log.warn("清理失败向量失败: documentId={}", documentId, e);
+        }
+        documentManager.deleteChunksByDocumentId(documentId);
     }
 
     private String readText(DocumentBO document) {

@@ -55,13 +55,10 @@ class AuthServiceImplTest {
     void loginSuccess() {
         LoginRequest request = new LoginRequest("admin", "password123");
         UserBO userBO = buildUserBO(1L, "admin", UserStatusEnum.ENABLED.getCode());
-        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of(new RoleDTO(1L, "SYSTEM_ADMIN", "系统管理员")));
-
         when(userManager.getByUsername("admin")).thenReturn(userBO);
         when(passwordEncoder.matches("password123", "$2a$10$encoded")).thenReturn(true);
-        when(jwtService.generateToken(1L, "admin", List.of("SYSTEM_ADMIN"))).thenReturn("access-token");
+        when(jwtService.generateToken(1L, "admin", List.of("ROLE_ADMIN"))).thenReturn("access-token");
         when(jwtService.getExpiresIn()).thenReturn(7200L);
-        when(userDTOConverter.toUserInfoDTO(userBO)).thenReturn(userInfoDTO);
         when(permissionService.getCurrentUserPermissionCodes(1L)).thenReturn(List.of("space:view", "space:create"));
         when(menuService.getCurrentUserMenus(1L)).thenReturn(List.of());
 
@@ -70,7 +67,8 @@ class AuthServiceImplTest {
         assertNotNull(response);
         assertEquals("access-token", response.accessToken());
         assertEquals(7200L, response.expiresIn());
-        assertEquals(userInfoDTO, response.user());
+        assertEquals("Test User", response.user().displayName());
+        assertEquals("ROLE_ADMIN", response.user().roles().getFirst().roleCode());
     }
 
     @Test
@@ -117,12 +115,10 @@ class AuthServiceImplTest {
     void getCurrentUserSuccess() {
         String token = "valid-token";
         UserBO userBO = buildUserBO(1L, "admin", UserStatusEnum.ENABLED.getCode());
-        UserInfoDTO userInfoDTO = new UserInfoDTO(1L, "admin", "管理员", List.of(new RoleDTO(1L, "SYSTEM_ADMIN", "系统管理员")));
 
         when(jwtService.validateToken(token)).thenReturn(true);
         when(jwtService.getUserId(token)).thenReturn(1L);
         when(userManager.getById(1L)).thenReturn(userBO);
-        when(userDTOConverter.toUserInfoDTO(userBO)).thenReturn(userInfoDTO);
 
         UserInfoDTO result = authService.getCurrentUser(token);
 

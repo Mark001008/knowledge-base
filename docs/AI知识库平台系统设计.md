@@ -2,14 +2,14 @@
 
 ## 1. 设计概述
 
-本文档基于《AI知识库平台需求文档》编写，面向第一阶段 MVP 开发落地。系统采用 Java 21、Spring Boot 3.x、MySQL 8.0、MinIO、可选 Milvus 和 OpenAI 兼容模型接口，建设一个支持文档上传、解析、切片、可选向量化、检索增强问答、引用溯源、权限控制和问答记录的 AI 知识库平台。
+本文档基于《AI知识库平台需求文档》编写，面向第一阶段 MVP 开发落地。系统采用 Java 21、Spring Boot 3.x、MySQL 8.0、MinIO、轻量 Qdrant 向量库和 OpenAI 兼容模型接口，建设一个支持文档上传、解析、切片、向量化、检索增强问答、引用溯源、权限控制和问答记录的 AI 知识库平台。
 
 第一阶段只设计后端、接口、数据、AI/RAG、部署与运维。前端不做详细技术设计，仅保留 API 对接边界。
 
 ### 1.1 设计目标
 
 - 支持用户登录、知识库管理、文档上传和文档处理状态查询。
-- 支持 PDF、TXT、Markdown 文档解析、清洗、切片和可选向量入库。
+- 支持 PDF、TXT、Markdown 文档解析、清洗、切片和向量入库。
 - 支持基于知识库的自然语言问答，并返回引用来源。
 - 支持知识库级权限控制，防止越权访问和越权检索。
 - 支持 Docker Compose 本地部署。
@@ -24,7 +24,7 @@
 | AI 框架 | 当前直接对接 OpenAI 兼容 HTTP 接口，后续可接 Spring AI |
 | 模型接口 | OpenAI 兼容接口 |
 | 数据库 | MySQL 8.0 |
-| 向量能力 | Milvus，可通过 `VECTOR_MILVUS_ENABLED` 关闭 |
+| 向量能力 | 当前 Qdrant，后续可切换独立 Milvus |
 | 文件存储 | MinIO |
 | 认证授权 | Spring Security + JWT |
 | 数据访问 | MyBatis Plus |
@@ -48,7 +48,7 @@ flowchart LR
     TASK --> PARSER[文档解析/清洗/切片]
     PARSER --> CHUNK[(MySQL 文档分片)]
     PARSER --> EMB[Embedding 生成]
-    EMB --> VDB[(可选 Milvus 向量库)]
+    EMB --> VDB[(Qdrant / Milvus 向量库)]
     TASK --> DB[(MySQL 业务库)]
 
     CHAT --> EMB
@@ -345,16 +345,16 @@ sequenceDiagram
     participant API as Document API
     participant M as MinIO
     participant DB as MySQL
-    participant T as Async Task
+    participant T as Document Ingestion
     participant E as EmbeddingClient
-    participant V as Optional Milvus
+    participant V as Qdrant
 
     U->>API: 上传文档
     API->>API: 校验权限/类型/大小
     API->>M: 保存原始文件
     API->>DB: 创建 kb_document(PENDING)
-    API->>T: 提交异步任务
-    API-->>U: 返回文档ID和PENDING状态
+    API->>T: 执行文档入库
+    API-->>U: 返回文档ID和处理状态
 
     T->>DB: 更新状态 PARSING
     T->>M: 读取原始文件
@@ -362,11 +362,11 @@ sequenceDiagram
     T->>DB: 更新状态 INDEXING
     T->>T: 文本切片
     T->>DB: 保存 kb_document_chunk
-    alt Milvus 已启用
+    alt 向量库已启用
         T->>E: 批量生成向量
         T->>V: 写入向量和metadata
-    else Milvus 未启用
-        T->>T: 跳过向量写入
+    else 向量库未启用
+        T->>T: 仅保存分片并跳过向量写入
     end
     T->>DB: 更新状态 COMPLETED
 ```
@@ -374,8 +374,8 @@ sequenceDiagram
 失败处理：
 
 - 解析、切片、分片落库失败时，文档状态更新为 `FAILED`。
-- `VECTOR_MILVUS_ENABLED=true` 时，Embedding 或向量写入失败，文档状态更新为 `FAILED`。
-- `VECTOR_MILVUS_ENABLED=false` 时，跳过 Embedding 和向量写入，文档可正常进入 `COMPLETED`。
+- `VECTOR_ENABLED=true` 时，Embedding 或向量写入失败，文档状态更新为 `FAILED`，并清理本次半成品分片和向量。
+- `VECTOR_ENABLED=false` 时，跳过 Embedding 和向量写入，文档可正常进入 `COMPLETED`。
 - `error_message` 记录可读失败原因。
 - 重建索引时先删除旧分片和旧向量，再重新处理；失败后文档状态为 `FAILED`，旧索引不再保留。
 
@@ -387,17 +387,17 @@ sequenceDiagram
     participant API as Chat API
     participant DB as MySQL
     participant E as EmbeddingClient
-    participant V as Optional Milvus
+    participant V as Qdrant
     participant L as ChatModel
 
     U->>API: 发送问题
     API->>DB: 校验会话和知识库权限
     API->>DB: 保存 user 消息
-    alt Milvus 已启用
+    alt 向量库已启用
         API->>E: 生成问题向量
         API->>V: 按 space_id 检索 TopK 分片
         API->>API: 过滤低于阈值的结果
-    else Milvus 未启用
+    else 向量库未启用
         API->>API: 返回无可用检索上下文
     end
     alt 有有效上下文
@@ -596,12 +596,13 @@ sequenceDiagram
 
 ## 6. 向量表设计
 
-Milvus 是可选向量能力。当前代码通过 `VECTOR_MILVUS_ENABLED` 控制是否启用：
+当前线上使用轻量 Qdrant 作为向量库，Milvus 保留为后续独立服务器方案。代码通过 `VECTOR_ENABLED` 和 `VECTOR_PROVIDER` 控制向量能力：
 
-- `false`：不连接 Milvus。文档上传后完成 MinIO 存储、文本解析、清洗、切片和 `kb_document_chunk` 落库，向量写入和向量检索跳过。
-- `true`：连接独立 Milvus 服务，写入和检索文档分片向量。
+- `VECTOR_ENABLED=false`：不连接向量库。文档上传后完成 MinIO 存储、文本解析、清洗、切片和 `kb_document_chunk` 落库，问答返回无匹配提示。
+- `VECTOR_ENABLED=true` 且 `VECTOR_PROVIDER=qdrant`：连接 Docker 内网 Qdrant，文档上传或重建后生成 embedding、写入 Qdrant，问答从 Qdrant 检索分片并返回引用。
+- `VECTOR_PROVIDER=milvus`：连接独立 Milvus 服务，适用于后续独立向量服务器。
 
-当前实现通过 Milvus HTTP API 写入和检索，collection 字段由服务初始化；后续可演进为 Spring AI Milvus VectorStore。
+当前 Qdrant collection 由服务自动初始化，字段包括向量、知识库 ID、文档 ID、分片 ID、文档名、分片序号和正文内容。
 
 每条向量 Document 的 metadata 必须包含：
 
@@ -1052,7 +1053,7 @@ JWT_EXPIRES_IN=7200
 - Embedding：`/embeddings`
 - 未配置 `AI_EMBEDDING_MODEL` 时，使用本地哈希向量兜底，保证文档处理流程可完成。
 
-Milvus 默认关闭。当前 2c2g 服务器不部署 Milvus/etcd，后续独立 Milvus 机器可用后再启用。
+当前 2c4g 线上服务器使用轻量 Qdrant 容器，不在本机部署 Milvus/etcd。后续有独立 Milvus 机器后，可通过 `VECTOR_PROVIDER=milvus` 切换。
 
 ```yaml
 agent:

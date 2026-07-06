@@ -6,6 +6,7 @@ import java.math.BigDecimal;
  * 引用来源 DTO
  */
 public record CitationDTO(
+        String id,
         Long documentId,
         String documentName,
         Long chunkId,

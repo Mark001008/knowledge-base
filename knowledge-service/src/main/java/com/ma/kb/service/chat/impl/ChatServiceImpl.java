@@ -103,7 +103,9 @@ public class ChatServiceImpl implements ChatService {
                 AnswerCitationBO citation = chatDTOConverter.toCitationBO(savedMsg.getId(), sr);
                 citationBOs.add(citation);
 
+                String citationId = sr.getDocumentId() + "_" + sr.getChunkId();
                 citations.add(new CitationDTO(
+                        citationId,
                         sr.getDocumentId(), sr.getDocumentName(),
                         sr.getChunkId(), sr.getPageNumber(),
                         sr.getScore(), sr.getContent()
@@ -134,8 +136,11 @@ public class ChatServiceImpl implements ChatService {
             if (ChatRoleEnum.ASSISTANT.getCode().equals(msg.getRole())) {
                 List<AnswerCitationBO> citationBOs = chatManager.getCitationsByMessageId(msg.getId());
                 citations = citationBOs.stream()
-                        .map(c -> new CitationDTO(c.getDocumentId(), c.getDocumentName(),
-                                c.getChunkId(), c.getPageNumber(), c.getScore(), c.getQuoteText()))
+                        .map(c -> {
+                            String citationId = c.getDocumentId() + "_" + c.getChunkId();
+                            return new CitationDTO(citationId, c.getDocumentId(), c.getDocumentName(),
+                                    c.getChunkId(), c.getPageNumber(), c.getScore(), c.getQuoteText());
+                        })
                         .toList();
             }
             result.add(new ChatMessageVO(msg.getId(), msg.getRole(), msg.getContent(),

@@ -150,21 +150,72 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon
   (7, 3, '权限管理', 'MENU', '/system/permissions', 'system/permissions/PermissionListPage', 'lock', 'permission:view', 4);
 
 -- ============================================================
--- 更新内置角色标记
+-- 初始化角色数据
 -- ============================================================
-UPDATE sys_role SET builtin = 1, description = '系统管理员，拥有全部权限' WHERE role_code = 'SYSTEM_ADMIN';
-UPDATE sys_role SET builtin = 1, description = '普通用户' WHERE role_code = 'USER';
+
+-- 超级管理员（原有 SYSTEM_ADMIN 改名）
+UPDATE sys_role SET builtin = 1, description = '超级管理员，拥有全部权限', role_name = '超级管理员' WHERE role_code = 'SYSTEM_ADMIN';
+
+-- 知识库管理员（新增）
+INSERT INTO sys_role (role_code, role_name, description, builtin, status)
+VALUES ('KB_ADMIN', '知识库管理员', '可管理知识库、文档、成员和配置，不能管理系统设置', 1, 'ENABLED');
+
+-- 普通用户
+UPDATE sys_role SET builtin = 1, description = '普通用户，仅可查看和提问' WHERE role_code = 'USER';
 
 -- ============================================================
--- 系统管理员角色授权所有权限
+-- 超级管理员：授权所有权限 + 所有菜单
 -- ============================================================
 INSERT INTO sys_role_permission (role_id, permission_id)
 SELECT r.id, p.id
 FROM sys_role r, sys_permission p
 WHERE r.role_code = 'SYSTEM_ADMIN';
 
--- 系统管理员角色授权所有菜单
 INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT r.id, m.id
 FROM sys_role r, sys_menu m
 WHERE r.role_code = 'SYSTEM_ADMIN';
+
+-- ============================================================
+-- 知识库管理员：知识库 + 文档 + 成员 + 配置 + 问答（不含系统管理）
+-- ============================================================
+INSERT INTO sys_role_permission (role_id, permission_id)
+SELECT r.id, p.id
+FROM sys_role r, sys_permission p
+WHERE r.role_code = 'KB_ADMIN'
+  AND p.permission_code IN (
+    'space:view', 'space:create', 'space:update', 'space:delete',
+    'document:view', 'document:upload', 'document:create', 'document:update', 'document:delete', 'document:rebuild',
+    'qa:view', 'qa:ask',
+    'member:view', 'member:add', 'member:update', 'member:remove',
+    'setting:view', 'setting:update'
+  );
+
+-- 知识库管理员菜单：知识库 + 最近问答（不含系统管理）
+INSERT INTO sys_role_menu (role_id, menu_id)
+SELECT r.id, m.id
+FROM sys_role r, sys_menu m
+WHERE r.role_code = 'KB_ADMIN'
+  AND m.path IN ('/workspace', '/recent-qa');
+
+-- ============================================================
+-- 普通用户：只读权限 + 问答提问
+-- ============================================================
+INSERT INTO sys_role_permission (role_id, permission_id)
+SELECT r.id, p.id
+FROM sys_role r, sys_permission p
+WHERE r.role_code = 'USER'
+  AND p.permission_code IN (
+    'space:view',
+    'document:view',
+    'qa:view', 'qa:ask',
+    'member:view',
+    'setting:view'
+  );
+
+-- 普通用户菜单：知识库 + 最近问答
+INSERT INTO sys_role_menu (role_id, menu_id)
+SELECT r.id, m.id
+FROM sys_role r, sys_menu m
+WHERE r.role_code = 'USER'
+  AND m.path IN ('/workspace', '/recent-qa');

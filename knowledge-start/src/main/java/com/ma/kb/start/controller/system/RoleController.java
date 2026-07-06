@@ -75,6 +75,15 @@ public class RoleController {
     }
 
     /**
+     * 获取角色的权限ID列表
+     */
+    @GetMapping("/{id}/permissions")
+    public ApiResponse<List<Long>> getRolePermissionIds(@PathVariable Long id) {
+        List<Long> permissionIds = roleService.getRolePermissionIds(id);
+        return ApiResponse.success(permissionIds);
+    }
+
+    /**
      * 分配权限
      */
     @PutMapping("/{id}/permissions")

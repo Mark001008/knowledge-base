@@ -174,6 +174,11 @@ public class RoleServiceImpl implements RoleService {
         log.info("分配角色菜单成功: roleId={}, menuIds={}", id, menuIds);
     }
 
+    @Override
+    public List<Long> getRolePermissionIds(Long roleId) {
+        return rolePermissionMapper.selectPermissionIdsByRoleId(roleId);
+    }
+
     private RoleDetailDTO convertToDTO(RoleDO roleDO) {
         return new RoleDetailDTO(
                 roleDO.getId(),

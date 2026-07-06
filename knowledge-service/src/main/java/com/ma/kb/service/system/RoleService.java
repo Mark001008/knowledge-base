@@ -45,4 +45,9 @@ public interface RoleService {
      * 分配菜单
      */
     void assignMenus(Long id, List<Long> menuIds);
+
+    /**
+     * 获取角色的权限ID列表
+     */
+    List<Long> getRolePermissionIds(Long roleId);
 }

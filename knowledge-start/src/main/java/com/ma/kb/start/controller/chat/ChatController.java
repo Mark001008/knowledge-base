@@ -100,4 +100,16 @@ public class ChatController {
         chatService.deleteSession(userId, sessionId);
         return ApiResponse.success(null);
     }
+
+    /**
+     * 获取最近会话（跨知识库）
+     */
+    @GetMapping("/chat/recent-sessions")
+    @RequirePermission("qa:view")
+    public ApiResponse<List<RecentSessionVO>> listRecentSessions(HttpServletRequest request,
+                                                                  @RequestParam(defaultValue = "20") int limit) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        List<RecentSessionVO> sessions = chatService.listRecentSessions(userId, limit);
+        return ApiResponse.success(sessions);
+    }
 }

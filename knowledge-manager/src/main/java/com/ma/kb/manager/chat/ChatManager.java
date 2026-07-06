@@ -65,6 +65,16 @@ public class ChatManager {
         return sessions.stream().map(chatConverter::toSessionBO).toList();
     }
 
+    public List<ChatSessionBO> listRecentSessionsByUserId(Long userId, int limit) {
+        List<ChatSessionDO> sessions = sessionMapper.selectList(
+                new LambdaQueryWrapper<ChatSessionDO>()
+                        .eq(ChatSessionDO::getUserId, userId)
+                        .orderByDesc(ChatSessionDO::getUpdatedAt)
+                        .last("LIMIT " + limit)
+        );
+        return sessions.stream().map(chatConverter::toSessionBO).toList();
+    }
+
     public ChatMessageBO saveMessage(ChatMessageBO messageBO) {
         ChatMessageDO messageDO = chatConverter.toMessageDO(messageBO);
         messageMapper.insert(messageDO);

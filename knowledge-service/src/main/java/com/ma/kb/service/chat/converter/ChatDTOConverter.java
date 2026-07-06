@@ -46,7 +46,7 @@ public interface ChatDTOConverter {
     @Mapping(target = "chunkId", source = "searchResult.chunkId")
     @Mapping(target = "score", source = "searchResult.score")
     @Mapping(target = "quoteText", source = "searchResult.content")
-    @Mapping(target = "documentName", ignore = true)
-    @Mapping(target = "pageNumber", ignore = true)
+    @Mapping(target = "documentName", source = "searchResult.documentName")
+    @Mapping(target = "pageNumber", source = "searchResult.pageNumber")
     AnswerCitationBO toCitationBO(Long messageId, SearchResult searchResult);
 }

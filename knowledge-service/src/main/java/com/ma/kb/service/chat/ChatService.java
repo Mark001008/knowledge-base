@@ -20,6 +20,11 @@ public interface ChatService {
     List<ChatSessionVO> listSessions(Long userId, Long spaceId);
 
     /**
+     * 获取用户最近的会话（跨知识库）
+     */
+    List<RecentSessionVO> listRecentSessions(Long userId, int limit);
+
+    /**
      * 发送问题
      */
     ChatMessageResponse sendMessage(Long userId, Long sessionId, ChatMessageRequest request);

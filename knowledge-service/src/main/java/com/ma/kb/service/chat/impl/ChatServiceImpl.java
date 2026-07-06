@@ -74,6 +74,19 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    public List<RecentSessionVO> listRecentSessions(Long userId, int limit) {
+        List<ChatSessionBO> sessions = chatManager.listRecentSessionsByUserId(userId, limit);
+        return sessions.stream().map(s -> {
+            String spaceName = "未知知识库";
+            var space = spaceManager.getById(s.getSpaceId());
+            if (space != null) {
+                spaceName = space.getName();
+            }
+            return new RecentSessionVO(s.getId(), s.getSpaceId(), spaceName, s.getTitle(), s.getUpdatedAt());
+        }).toList();
+    }
+
+    @Override
     public ChatMessageResponse sendMessage(Long userId, Long sessionId,
                                            ChatMessageRequest request) {
         ChatSessionBO session = chatManager.getSessionById(sessionId);

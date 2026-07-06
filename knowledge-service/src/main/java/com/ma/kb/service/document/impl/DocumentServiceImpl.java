@@ -40,6 +40,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentServiceImpl.class);
     private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
+    private static final int MAX_DOCUMENTS_PER_SPACE = 10;
 
     private final DocumentManager documentManager;
     private final SpaceManager spaceManager;
@@ -74,6 +75,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public DocumentUploadResponse upload(Long userId, Long spaceId, MultipartFile file) {
         checkSpaceRole(userId, spaceId, SpaceRoleEnum.ADMIN);
+        checkDocumentLimit(spaceId);
 
         String originalFilename = file.getOriginalFilename();
         if (!FileTypeEnum.isSupported(originalFilename)) {
@@ -107,6 +109,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public DocumentUploadResponse createOnlineDocument(Long userId, Long spaceId, OnlineDocumentRequest request) {
         checkSpaceRole(userId, spaceId, SpaceRoleEnum.ADMIN);
+        checkDocumentLimit(spaceId);
         validateOnlineDocumentRequest(request);
 
         byte[] contentBytes = request.content().getBytes(StandardCharsets.UTF_8);
@@ -261,6 +264,13 @@ public class DocumentServiceImpl implements DocumentService {
     private boolean isSystemAdmin(Long userId) {
         UserBO user = userManager.getById(userId);
         return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
+    }
+
+    private void checkDocumentLimit(Long spaceId) {
+        int count = documentManager.countBySpaceId(spaceId);
+        if (count >= MAX_DOCUMENTS_PER_SPACE) {
+            throw new BusinessException(ErrorCode.DOCUMENT_LIMIT_EXCEEDED, "每个知识库最多上传" + MAX_DOCUMENTS_PER_SPACE + "个文档");
+        }
     }
 
     private void uploadMarkdown(String bucket, String objectKey, byte[] contentBytes) {

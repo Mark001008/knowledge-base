@@ -95,4 +95,12 @@ public class SpaceManager {
         );
         return members.stream().map(spaceConverter::toMemberBO).toList();
     }
+
+    public List<SpaceBO> listByOwner(Long ownerId) {
+        List<SpaceDO> spaces = spaceMapper.selectList(
+                new LambdaQueryWrapper<SpaceDO>()
+                        .eq(SpaceDO::getOwnerId, ownerId)
+        );
+        return spaces.stream().map(spaceConverter::toBO).toList();
+    }
 }

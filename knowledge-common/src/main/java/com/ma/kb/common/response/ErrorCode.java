@@ -30,6 +30,7 @@ public enum ErrorCode {
     SPACE_MEMBER_ALREADY_EXISTS(40303, "该用户已是知识库成员"),
     SPACE_MEMBER_NOT_FOUND(40304, "知识库成员不存在"),
     SPACE_OWNER_CANNOT_LEAVE(40305, "知识库所有者不能移除"),
+    SPACE_LIMIT_EXCEEDED(40306, "知识库数量已达上限"),
 
     // 文档 40400-40499
     DOCUMENT_NOT_FOUND(40400, "文档不存在"),
@@ -37,6 +38,7 @@ public enum ErrorCode {
     DOCUMENT_UPLOAD_FAILED(40402, "文件上传失败"),
     DOCUMENT_PARSE_FAILED(40403, "文档解析失败"),
     DOCUMENT_NOT_COMPLETED(40404, "文档尚未处理完成"),
+    DOCUMENT_LIMIT_EXCEEDED(40405, "文档数量已达上限"),
 
     // 问答 40500-40599
     CHAT_SESSION_NOT_FOUND(40500, "会话不存在"),

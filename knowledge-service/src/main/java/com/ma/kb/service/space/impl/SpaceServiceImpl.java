@@ -27,6 +27,8 @@ public class SpaceServiceImpl implements SpaceService {
 
     private static final Logger log = LoggerFactory.getLogger(SpaceServiceImpl.class);
     private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
+    private static final String KB_ADMIN_ROLE = "KB_ADMIN";
+    private static final int USER_MAX_SPACES = 2;
 
     private final SpaceManager spaceManager;
     private final UserManager userManager;
@@ -42,6 +44,14 @@ public class SpaceServiceImpl implements SpaceService {
     @Override
     public SpaceVO create(Long userId, SpaceCreateRequest request) {
         SpaceVisibilityEnum.fromCode(request.visibility());
+
+        // 普通用户最多创建2个知识库
+        if (!isSystemAdmin(userId) && !isKbAdmin(userId)) {
+            List<SpaceBO> userSpaces = spaceManager.listByOwner(userId);
+            if (userSpaces.size() >= USER_MAX_SPACES) {
+                throw new BusinessException(ErrorCode.SPACE_LIMIT_EXCEEDED, "普通用户最多创建" + USER_MAX_SPACES + "个知识库");
+            }
+        }
 
         SpaceBO spaceBO = spaceDTOConverter.toBO(request, userId);
 
@@ -199,5 +209,10 @@ public class SpaceServiceImpl implements SpaceService {
     private boolean isSystemAdmin(Long userId) {
         UserBO user = userManager.getById(userId);
         return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
+    }
+
+    private boolean isKbAdmin(Long userId) {
+        UserBO user = userManager.getById(userId);
+        return user != null && user.getRoles() != null && user.getRoles().contains(KB_ADMIN_ROLE);
     }
 }

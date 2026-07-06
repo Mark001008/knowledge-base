@@ -8,4 +8,11 @@
         WHERE role_id = #{roleId}
     </delete>
 
+    <!-- 查询角色的权限ID列表 -->
+    <select id="selectPermissionIdsByRoleId" resultType="java.lang.Long">
+        SELECT permission_id
+        FROM sys_role_permission
+        WHERE role_id = #{roleId}
+    </select>
+
 </mapper>

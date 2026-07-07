@@ -127,4 +127,14 @@ public class ChatManager {
         // 删除会话
         sessionMapper.deleteById(sessionId);
     }
+
+    public void deleteSessionsBySpaceId(Long spaceId) {
+        List<ChatSessionDO> sessions = sessionMapper.selectList(
+                new LambdaQueryWrapper<ChatSessionDO>()
+                        .eq(ChatSessionDO::getSpaceId, spaceId)
+        );
+        for (ChatSessionDO session : sessions) {
+            deleteSession(session.getId());
+        }
+    }
 }

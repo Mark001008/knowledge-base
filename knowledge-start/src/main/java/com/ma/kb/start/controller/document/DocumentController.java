@@ -6,13 +6,20 @@ import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.document.DocumentService;
 import com.ma.kb.service.document.dto.DocumentContentVO;
+import com.ma.kb.service.document.dto.DocumentDownloadVO;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
 import com.ma.kb.service.document.dto.OnlineDocumentRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -88,6 +95,30 @@ public class DocumentController {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentContentVO content = documentService.getContent(userId, id);
         return ApiResponse.success(content);
+    }
+
+    /**
+     * 下载原始文档
+     */
+    @GetMapping("/documents/{id}/download")
+    @RequirePermission("document:download")
+    public ResponseEntity<StreamingResponseBody> downloadOriginal(HttpServletRequest request, @PathVariable Long id) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        DocumentDownloadVO download = documentService.downloadOriginal(userId, id);
+        String encodedFileName = URLEncoder.encode(download.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
+        StreamingResponseBody body = outputStream -> {
+            try (var inputStream = download.inputStream()) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
+                .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        if (download.fileSize() != null && download.fileSize() >= 0) {
+            response.contentLength(download.fileSize());
+        }
+        return response.body(body);
     }
 
     /**

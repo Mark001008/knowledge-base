@@ -15,4 +15,9 @@ public interface UserRoleMapper extends BaseMapper<UserRoleDO> {
      * 删除用户的所有角色关联
      */
     int deleteByUserId(@Param("userId") Long userId);
+
+    /**
+     * 统计绑定指定角色的用户数
+     */
+    long countByRoleId(@Param("roleId") Long roleId);
 }

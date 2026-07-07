@@ -19,6 +19,7 @@ import com.ma.kb.service.document.DocumentIngestionService;
 import com.ma.kb.service.document.DocumentService;
 import com.ma.kb.service.document.converter.DocumentDTOConverter;
 import com.ma.kb.service.document.dto.DocumentContentVO;
+import com.ma.kb.service.document.dto.DocumentDownloadVO;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
 import com.ma.kb.service.document.dto.OnlineDocumentRequest;
@@ -40,7 +41,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentServiceImpl.class);
     private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
-    private static final int MAX_DOCUMENTS_PER_SPACE = 10;
+    private static final int MAX_DOCUMENTS_PER_SPACE = 200;
 
     private final DocumentManager documentManager;
     private final SpaceManager spaceManager;
@@ -155,6 +156,22 @@ public class DocumentServiceImpl implements DocumentService {
         } catch (Exception e) {
             log.error("读取文档正文失败: id={}", documentId, e);
             throw new BusinessException(ErrorCode.DOCUMENT_UPLOAD_FAILED);
+        }
+    }
+
+    @Override
+    public DocumentDownloadVO downloadOriginal(Long userId, Long documentId) {
+        DocumentBO document = getAndCheckAccess(userId, documentId);
+        try {
+            return new DocumentDownloadVO(
+                    document.getFileName(),
+                    document.getFileType(),
+                    document.getFileSize(),
+                    storageService.download(document.getStorageBucket(), document.getStorageObjectKey())
+            );
+        } catch (Exception e) {
+            log.error("下载原始文档失败: id={}", documentId, e);
+            throw new BusinessException(ErrorCode.DOCUMENT_DOWNLOAD_FAILED);
         }
     }
 

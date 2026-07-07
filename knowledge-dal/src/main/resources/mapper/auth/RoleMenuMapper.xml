@@ -8,4 +8,11 @@
         WHERE role_id = #{roleId}
     </delete>
 
+    <!-- 统计绑定指定菜单的角色数 -->
+    <select id="countByMenuId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM sys_role_menu
+        WHERE menu_id = #{menuId}
+    </select>
+
 </mapper>

@@ -1,10 +1,14 @@
 package com.ma.kb.start.controller.system;
 
 import com.ma.kb.common.response.ApiResponse;
+import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.RequirePermission;
+import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.system.PermissionService;
 import com.ma.kb.service.system.dto.CreatePermissionRequest;
 import com.ma.kb.service.system.dto.PermissionDTO;
 import com.ma.kb.service.system.dto.UpdatePermissionRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,15 +28,18 @@ import java.util.List;
 public class PermissionController {
 
     private final PermissionService permissionService;
+    private final JwtService jwtService;
 
-    public PermissionController(PermissionService permissionService) {
+    public PermissionController(PermissionService permissionService, JwtService jwtService) {
         this.permissionService = permissionService;
+        this.jwtService = jwtService;
     }
 
     /**
      * 获取所有权限列表
      */
     @GetMapping
+    @RequirePermission("permission:view")
     public ApiResponse<List<PermissionDTO>> getAllPermissions() {
         List<PermissionDTO> permissions = permissionService.getAllPermissions();
         return ApiResponse.success(permissions);
@@ -42,6 +49,7 @@ public class PermissionController {
      * 根据ID获取权限
      */
     @GetMapping("/{id}")
+    @RequirePermission("permission:view")
     public ApiResponse<PermissionDTO> getPermissionById(@PathVariable Long id) {
         PermissionDTO permission = permissionService.getPermissionById(id);
         return ApiResponse.success(permission);
@@ -51,6 +59,7 @@ public class PermissionController {
      * 创建权限
      */
     @PostMapping
+    @RequirePermission("permission:create")
     public ApiResponse<PermissionDTO> createPermission(@RequestBody CreatePermissionRequest request) {
         PermissionDTO permission = permissionService.createPermission(request);
         return ApiResponse.success(permission);
@@ -60,6 +69,7 @@ public class PermissionController {
      * 更新权限
      */
     @PutMapping("/{id}")
+    @RequirePermission("permission:update")
     public ApiResponse<PermissionDTO> updatePermission(@PathVariable Long id, @RequestBody UpdatePermissionRequest request) {
         PermissionDTO permission = permissionService.updatePermission(id, request);
         return ApiResponse.success(permission);
@@ -69,6 +79,7 @@ public class PermissionController {
      * 删除权限
      */
     @DeleteMapping("/{id}")
+    @RequirePermission("permission:delete")
     public ApiResponse<Void> deletePermission(@PathVariable Long id) {
         permissionService.deletePermission(id);
         return ApiResponse.success(null);
@@ -78,9 +89,8 @@ public class PermissionController {
      * 获取当前用户权限编码列表
      */
     @GetMapping("/current")
-    public ApiResponse<List<String>> getCurrentUserPermissions() {
-        // TODO: 从SecurityContext获取当前用户ID
-        // 暂时返回空列表
-        return ApiResponse.success(List.of());
+    public ApiResponse<List<String>> getCurrentUserPermissions(HttpServletRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        return ApiResponse.success(permissionService.getCurrentUserPermissionCodes(userId));
     }
 }

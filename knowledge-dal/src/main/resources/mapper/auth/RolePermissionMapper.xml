@@ -15,4 +15,11 @@
         WHERE role_id = #{roleId}
     </select>
 
+    <!-- 统计绑定指定权限的角色数 -->
+    <select id="countByPermissionId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM sys_role_permission
+        WHERE permission_id = #{permissionId}
+    </select>
+
 </mapper>

@@ -3,8 +3,13 @@ package com.ma.kb.service.space.impl;
 import com.ma.kb.common.enums.SpaceRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
+import com.ma.kb.integration.storage.StorageService;
+import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.auth.bo.UserBO;
+import com.ma.kb.manager.chat.ChatManager;
+import com.ma.kb.manager.document.DocumentManager;
+import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
 import com.ma.kb.manager.space.bo.SpaceBO;
 import com.ma.kb.service.space.converter.SpaceDTOConverter;
@@ -16,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +35,14 @@ class SpaceServiceImplTest {
     @Mock
     private UserManager userManager;
     @Mock
+    private DocumentManager documentManager;
+    @Mock
+    private ChatManager chatManager;
+    @Mock
+    private StorageService storageService;
+    @Mock
+    private VectorSearchService vectorSearchService;
+    @Mock
     private SpaceDTOConverter spaceDTOConverter;
 
     private SpaceServiceImpl spaceService;
@@ -39,7 +53,15 @@ class SpaceServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        spaceService = new SpaceServiceImpl(spaceManager, userManager, spaceDTOConverter);
+        spaceService = new SpaceServiceImpl(
+                spaceManager,
+                userManager,
+                documentManager,
+                chatManager,
+                storageService,
+                vectorSearchService,
+                spaceDTOConverter
+        );
     }
 
     @Test
@@ -107,9 +129,17 @@ class SpaceServiceImplTest {
         SpaceBO spaceBO = buildSpaceBO(SPACE_ID, "知识库", OWNER_ID);
         when(spaceManager.getById(SPACE_ID)).thenReturn(spaceBO);
         when(spaceManager.getMemberRole(SPACE_ID, OWNER_ID)).thenReturn(SpaceRoleEnum.OWNER.getCode());
+        DocumentBO document = buildDocumentBO(200L, SPACE_ID);
+        when(documentManager.listBySpaceId(SPACE_ID)).thenReturn(List.of(document));
 
         spaceService.delete(OWNER_ID, SPACE_ID);
 
+        verify(storageService).delete("kb", "spaces/100/doc.pdf");
+        verify(vectorSearchService).deleteByDocumentId(200L);
+        verify(documentManager).deleteChunksByDocumentId(200L);
+        verify(documentManager).deleteById(200L);
+        verify(chatManager).deleteSessionsBySpaceId(SPACE_ID);
+        verify(spaceManager).deleteMembersBySpaceId(SPACE_ID);
         verify(spaceManager).deleteById(SPACE_ID);
     }
 
@@ -185,6 +215,15 @@ class SpaceServiceImplTest {
         bo.setTemperature(new BigDecimal("0.2"));
         bo.setChunkSize(800);
         bo.setChunkOverlap(120);
+        return bo;
+    }
+
+    private DocumentBO buildDocumentBO(Long id, Long spaceId) {
+        DocumentBO bo = new DocumentBO();
+        bo.setId(id);
+        bo.setSpaceId(spaceId);
+        bo.setStorageBucket("kb");
+        bo.setStorageObjectKey("spaces/100/doc.pdf");
         return bo;
     }
 }

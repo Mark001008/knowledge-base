@@ -79,6 +79,7 @@ INSERT INTO sys_permission (permission_code, permission_name, module, descriptio
 -- 文档权限
 INSERT INTO sys_permission (permission_code, permission_name, module, description) VALUES
   ('document:view', '查看文档', '文档', '查看文档列表和内容'),
+  ('document:download', '下载原文', '文档', '下载原始文档用于核验'),
   ('document:upload', '上传文档', '文档', '上传文件文档'),
   ('document:create', '创建文档', '文档', '创建在线文档'),
   ('document:update', '编辑文档', '文档', '编辑文档内容'),
@@ -88,6 +89,9 @@ INSERT INTO sys_permission (permission_code, permission_name, module, descriptio
 -- 问答权限
 INSERT INTO sys_permission (permission_code, permission_name, module, description) VALUES
   ('qa:view', '查看问答', '问答', '查看问答会话和消息'),
+  ('qa:create', '创建会话', '问答', '创建问答会话'),
+  ('qa:update', '编辑会话', '问答', '重命名问答会话'),
+  ('qa:delete', '删除会话', '问答', '删除问答会话'),
   ('qa:ask', '提问', '问答', '发送问题获取回答');
 
 -- 成员权限
@@ -185,8 +189,8 @@ FROM sys_role r, sys_permission p
 WHERE r.role_code = 'KB_ADMIN'
   AND p.permission_code IN (
     'space:view', 'space:create', 'space:update', 'space:delete',
-    'document:view', 'document:upload', 'document:create', 'document:update', 'document:delete', 'document:rebuild',
-    'qa:view', 'qa:ask',
+    'document:view', 'document:download', 'document:upload', 'document:create', 'document:update', 'document:delete', 'document:rebuild',
+    'qa:view', 'qa:create', 'qa:update', 'qa:delete', 'qa:ask',
     'member:view', 'member:add', 'member:update', 'member:remove',
     'setting:view', 'setting:update'
   );
@@ -207,8 +211,8 @@ FROM sys_role r, sys_permission p
 WHERE r.role_code = 'USER'
   AND p.permission_code IN (
     'space:view',
-    'document:view',
-    'qa:view', 'qa:ask',
+    'document:view', 'document:download',
+    'qa:view', 'qa:create', 'qa:update', 'qa:delete', 'qa:ask',
     'member:view',
     'setting:view'
   );

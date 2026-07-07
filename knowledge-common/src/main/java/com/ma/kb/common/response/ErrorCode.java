@@ -39,6 +39,7 @@ public enum ErrorCode {
     DOCUMENT_PARSE_FAILED(40403, "文档解析失败"),
     DOCUMENT_NOT_COMPLETED(40404, "文档尚未处理完成"),
     DOCUMENT_LIMIT_EXCEEDED(40405, "文档数量已达上限"),
+    DOCUMENT_DOWNLOAD_FAILED(40406, "文件下载失败"),
 
     // 问答 40500-40599
     CHAT_SESSION_NOT_FOUND(40500, "会话不存在"),
@@ -53,6 +54,9 @@ public enum ErrorCode {
     USER_BUILTIN_CANNOT_DELETE(40605, "内置用户不能删除"),
     USER_CANNOT_DISABLE_SELF(40606, "不能禁用当前登录用户"),
     ROLE_HAS_USERS(40607, "角色下还有用户，不能删除"),
+    ROLE_CODE_EXISTS(40608, "角色编码已存在"),
+    MENU_HAS_ROLES(40609, "菜单已分配给角色，不能删除"),
+    PERMISSION_HAS_ROLES(40610, "权限已分配给角色，不能删除"),
 
     // 系统异常 50000-50099
     INTERNAL_ERROR(50000, "系统内部错误"),

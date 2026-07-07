@@ -3,6 +3,7 @@ package com.ma.kb.service.document;
 import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
 import com.ma.kb.service.document.dto.DocumentContentVO;
+import com.ma.kb.service.document.dto.DocumentDownloadVO;
 import com.ma.kb.service.document.dto.OnlineDocumentRequest;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,6 +28,11 @@ public interface DocumentService {
      * 查询在线文档正文
      */
     DocumentContentVO getContent(Long userId, Long documentId);
+
+    /**
+     * 下载原始文档
+     */
+    DocumentDownloadVO downloadOriginal(Long userId, Long documentId);
 
     /**
      * 更新在线文档正文

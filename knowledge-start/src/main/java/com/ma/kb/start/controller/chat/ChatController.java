@@ -30,7 +30,7 @@ public class ChatController {
      * 创建会话
      */
     @PostMapping("/spaces/{spaceId}/chat/sessions")
-    @RequirePermission("qa:view")
+    @RequirePermission("qa:create")
     public ApiResponse<ChatSessionVO> createSession(HttpServletRequest request,
                                                     @PathVariable Long spaceId,
                                                     @RequestBody ChatSessionCreateRequest body) {
@@ -80,7 +80,7 @@ public class ChatController {
      * 更新会话（重命名）
      */
     @PutMapping("/chat/sessions/{sessionId}")
-    @RequirePermission("qa:view")
+    @RequirePermission("qa:update")
     public ApiResponse<Void> updateSession(HttpServletRequest request,
                                            @PathVariable Long sessionId,
                                            @RequestBody ChatSessionUpdateRequest body) {
@@ -93,7 +93,7 @@ public class ChatController {
      * 删除会话
      */
     @DeleteMapping("/chat/sessions/{sessionId}")
-    @RequirePermission("qa:view")
+    @RequirePermission("qa:delete")
     public ApiResponse<Void> deleteSession(HttpServletRequest request,
                                            @PathVariable Long sessionId) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);

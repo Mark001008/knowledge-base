@@ -50,6 +50,13 @@ public class SpaceManager {
         spaceMapper.deleteById(id);
     }
 
+    public void deleteMembersBySpaceId(Long spaceId) {
+        spaceMemberMapper.delete(
+                new LambdaQueryWrapper<SpaceMemberDO>()
+                        .eq(SpaceMemberDO::getSpaceId, spaceId)
+        );
+    }
+
     public List<SpaceBO> listAccessible(Long userId) {
         List<Long> spaceIds = spaceMapper.selectAccessibleSpaceIds(userId);
         if (spaceIds.isEmpty()) {

@@ -4,8 +4,13 @@ import com.ma.kb.common.enums.SpaceRoleEnum;
 import com.ma.kb.common.enums.SpaceVisibilityEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
+import com.ma.kb.integration.storage.StorageService;
+import com.ma.kb.integration.vector.VectorSearchService;
 import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.auth.bo.UserBO;
+import com.ma.kb.manager.chat.ChatManager;
+import com.ma.kb.manager.document.DocumentManager;
+import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
 import com.ma.kb.manager.space.bo.SpaceBO;
 import com.ma.kb.manager.space.bo.SpaceMemberBO;
@@ -15,6 +20,7 @@ import com.ma.kb.service.space.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,16 +34,26 @@ public class SpaceServiceImpl implements SpaceService {
     private static final Logger log = LoggerFactory.getLogger(SpaceServiceImpl.class);
     private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
     private static final String KB_ADMIN_ROLE = "KB_ADMIN";
-    private static final int USER_MAX_SPACES = 2;
+    private static final int USER_MAX_SPACES = 20;
 
     private final SpaceManager spaceManager;
     private final UserManager userManager;
+    private final DocumentManager documentManager;
+    private final ChatManager chatManager;
+    private final StorageService storageService;
+    private final VectorSearchService vectorSearchService;
     private final SpaceDTOConverter spaceDTOConverter;
 
     public SpaceServiceImpl(SpaceManager spaceManager, UserManager userManager,
+                            DocumentManager documentManager, ChatManager chatManager,
+                            StorageService storageService, VectorSearchService vectorSearchService,
                             SpaceDTOConverter spaceDTOConverter) {
         this.spaceManager = spaceManager;
         this.userManager = userManager;
+        this.documentManager = documentManager;
+        this.chatManager = chatManager;
+        this.storageService = storageService;
+        this.vectorSearchService = vectorSearchService;
         this.spaceDTOConverter = spaceDTOConverter;
     }
 
@@ -45,7 +61,7 @@ public class SpaceServiceImpl implements SpaceService {
     public SpaceVO create(Long userId, SpaceCreateRequest request) {
         SpaceVisibilityEnum.fromCode(request.visibility());
 
-        // 普通用户最多创建2个知识库
+        // 普通用户保留合理上限，避免演示级限制影响团队真实使用。
         if (!isSystemAdmin(userId) && !isKbAdmin(userId)) {
             List<SpaceBO> userSpaces = spaceManager.listByOwner(userId);
             if (userSpaces.size() >= USER_MAX_SPACES) {
@@ -96,6 +112,7 @@ public class SpaceServiceImpl implements SpaceService {
     }
 
     @Override
+    @Transactional
     public void delete(Long userId, Long spaceId) {
         getAndCheckAccess(userId, spaceId);
         String role = spaceManager.getMemberRole(spaceId, userId);
@@ -103,6 +120,12 @@ public class SpaceServiceImpl implements SpaceService {
             throw new BusinessException(ErrorCode.SPACE_ACCESS_DENIED, "仅知识库所有者可删除");
         }
 
+        List<DocumentBO> documents = documentManager.listBySpaceId(spaceId);
+        for (DocumentBO document : documents) {
+            deleteDocumentCascade(document);
+        }
+        chatManager.deleteSessionsBySpaceId(spaceId);
+        spaceManager.deleteMembersBySpaceId(spaceId);
         spaceManager.deleteById(spaceId);
         log.info("知识库删除成功: id={}", spaceId);
     }
@@ -178,6 +201,21 @@ public class SpaceServiceImpl implements SpaceService {
         }
 
         return space;
+    }
+
+    private void deleteDocumentCascade(DocumentBO document) {
+        try {
+            storageService.delete(document.getStorageBucket(), document.getStorageObjectKey());
+        } catch (Exception e) {
+            log.warn("删除知识库时清理文档原文件失败，继续删除业务数据: documentId={}", document.getId(), e);
+        }
+        try {
+            vectorSearchService.deleteByDocumentId(document.getId());
+        } catch (Exception e) {
+            log.warn("删除知识库时清理文档向量失败，继续删除业务数据: documentId={}", document.getId(), e);
+        }
+        documentManager.deleteChunksByDocumentId(document.getId());
+        documentManager.deleteById(document.getId());
     }
 
     private void checkRole(Long userId, Long spaceId, SpaceRoleEnum minRole) {

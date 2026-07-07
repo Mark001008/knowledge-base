@@ -3,6 +3,7 @@ package com.ma.kb.service.system.impl;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.dal.mapper.auth.PermissionMapper;
+import com.ma.kb.dal.mapper.auth.RolePermissionMapper;
 import com.ma.kb.dal.model.auth.PermissionDO;
 import com.ma.kb.manager.auth.PermissionManager;
 import com.ma.kb.manager.auth.bo.PermissionBO;
@@ -27,10 +28,13 @@ public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionManager permissionManager;
     private final PermissionMapper permissionMapper;
+    private final RolePermissionMapper rolePermissionMapper;
 
-    public PermissionServiceImpl(PermissionManager permissionManager, PermissionMapper permissionMapper) {
+    public PermissionServiceImpl(PermissionManager permissionManager, PermissionMapper permissionMapper,
+                                 RolePermissionMapper rolePermissionMapper) {
         this.permissionManager = permissionManager;
         this.permissionMapper = permissionMapper;
+        this.rolePermissionMapper = rolePermissionMapper;
     }
 
     @Override
@@ -99,6 +103,9 @@ public class PermissionServiceImpl implements PermissionService {
         PermissionDO permissionDO = permissionMapper.selectById(id);
         if (permissionDO == null) {
             throw new BusinessException(ErrorCode.PERMISSION_NOT_FOUND);
+        }
+        if (rolePermissionMapper.countByPermissionId(id) > 0) {
+            throw new BusinessException(ErrorCode.PERMISSION_HAS_ROLES);
         }
 
         permissionMapper.deleteById(id);

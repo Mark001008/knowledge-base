@@ -1,6 +1,7 @@
 package com.ma.kb.start.controller.system;
 
 import com.ma.kb.common.response.ApiResponse;
+import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.service.system.RoleService;
 import com.ma.kb.service.system.dto.CreateRoleRequest;
 import com.ma.kb.service.system.dto.RoleDetailDTO;
@@ -33,6 +34,7 @@ public class RoleController {
      * 获取角色列表
      */
     @GetMapping
+    @RequirePermission("role:view")
     public ApiResponse<List<RoleDetailDTO>> getAllRoles() {
         List<RoleDetailDTO> roles = roleService.getAllRoles();
         return ApiResponse.success(roles);
@@ -42,6 +44,7 @@ public class RoleController {
      * 根据ID获取角色
      */
     @GetMapping("/{id}")
+    @RequirePermission("role:view")
     public ApiResponse<RoleDetailDTO> getRoleById(@PathVariable Long id) {
         RoleDetailDTO role = roleService.getRoleById(id);
         return ApiResponse.success(role);
@@ -51,6 +54,7 @@ public class RoleController {
      * 创建角色
      */
     @PostMapping
+    @RequirePermission("role:create")
     public ApiResponse<RoleDetailDTO> createRole(@RequestBody CreateRoleRequest request) {
         RoleDetailDTO role = roleService.createRole(request);
         return ApiResponse.success(role);
@@ -60,6 +64,7 @@ public class RoleController {
      * 更新角色
      */
     @PutMapping("/{id}")
+    @RequirePermission("role:update")
     public ApiResponse<RoleDetailDTO> updateRole(@PathVariable Long id, @RequestBody UpdateRoleRequest request) {
         RoleDetailDTO role = roleService.updateRole(id, request);
         return ApiResponse.success(role);
@@ -69,6 +74,7 @@ public class RoleController {
      * 删除角色
      */
     @DeleteMapping("/{id}")
+    @RequirePermission("role:delete")
     public ApiResponse<Void> deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);
         return ApiResponse.success(null);
@@ -78,6 +84,7 @@ public class RoleController {
      * 获取角色的权限ID列表
      */
     @GetMapping("/{id}/permissions")
+    @RequirePermission("role:view")
     public ApiResponse<List<Long>> getRolePermissionIds(@PathVariable Long id) {
         List<Long> permissionIds = roleService.getRolePermissionIds(id);
         return ApiResponse.success(permissionIds);
@@ -87,6 +94,7 @@ public class RoleController {
      * 分配权限
      */
     @PutMapping("/{id}/permissions")
+    @RequirePermission("role:assign-permission")
     public ApiResponse<Void> assignPermissions(@PathVariable Long id, @RequestBody List<Long> permissionIds) {
         roleService.assignPermissions(id, permissionIds);
         return ApiResponse.success(null);
@@ -96,6 +104,7 @@ public class RoleController {
      * 分配菜单
      */
     @PutMapping("/{id}/menus")
+    @RequirePermission("role:assign-menu")
     public ApiResponse<Void> assignMenus(@PathVariable Long id, @RequestBody List<Long> menuIds) {
         roleService.assignMenus(id, menuIds);
         return ApiResponse.success(null);

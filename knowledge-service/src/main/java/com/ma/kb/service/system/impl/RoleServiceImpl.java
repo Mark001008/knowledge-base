@@ -65,7 +65,7 @@ public class RoleServiceImpl implements RoleService {
         // 检查角色编码是否已存在
         RoleDO existing = roleMapper.selectByRoleCode(request.roleCode());
         if (existing != null) {
-            throw new BusinessException(ErrorCode.ROLE_NOT_FOUND);
+            throw new BusinessException(ErrorCode.ROLE_CODE_EXISTS);
         }
 
         RoleDO roleDO = new RoleDO();
@@ -123,8 +123,10 @@ public class RoleServiceImpl implements RoleService {
             throw new BusinessException(ErrorCode.ROLE_BUILTIN_CANNOT_DELETE);
         }
 
-        // 检查是否有用户绑定此角色
-        // TODO: 添加检查逻辑
+        long boundUserCount = userRoleMapper.countByRoleId(id);
+        if (boundUserCount > 0) {
+            throw new BusinessException(ErrorCode.ROLE_HAS_USERS);
+        }
 
         roleMapper.deleteById(id);
         log.info("删除角色成功: {}", id);

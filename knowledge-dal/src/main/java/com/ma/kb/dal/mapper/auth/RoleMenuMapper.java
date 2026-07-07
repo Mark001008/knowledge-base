@@ -15,4 +15,9 @@ public interface RoleMenuMapper extends BaseMapper<RoleMenuDO> {
      * 删除角色的所有菜单关联
      */
     int deleteByRoleId(@Param("roleId") Long roleId);
+
+    /**
+     * 统计绑定指定菜单的角色数
+     */
+    long countByMenuId(@Param("menuId") Long menuId);
 }

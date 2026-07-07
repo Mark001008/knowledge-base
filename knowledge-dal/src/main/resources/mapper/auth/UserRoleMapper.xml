@@ -8,4 +8,11 @@
         WHERE user_id = #{userId}
     </delete>
 
+    <!-- 统计绑定指定角色的用户数 -->
+    <select id="countByRoleId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM sys_user_role
+        WHERE role_id = #{roleId}
+    </select>
+
 </mapper>

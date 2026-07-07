@@ -1,6 +1,7 @@
 package com.ma.kb.start.controller.system;
 
 import com.ma.kb.common.response.ApiResponse;
+import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.service.system.UserService;
 import com.ma.kb.service.system.dto.CreateUserRequest;
 import com.ma.kb.service.system.dto.UpdateUserRequest;
@@ -32,6 +33,7 @@ public class UserController {
      * 获取用户列表
      */
     @GetMapping
+    @RequirePermission("user:view")
     public ApiResponse<List<UserDTO>> getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
         return ApiResponse.success(users);
@@ -41,6 +43,7 @@ public class UserController {
      * 根据ID获取用户
      */
     @GetMapping("/{id}")
+    @RequirePermission("user:view")
     public ApiResponse<UserDTO> getUserById(@PathVariable Long id) {
         UserDTO user = userService.getUserById(id);
         return ApiResponse.success(user);
@@ -50,6 +53,7 @@ public class UserController {
      * 创建用户
      */
     @PostMapping
+    @RequirePermission("user:create")
     public ApiResponse<UserDTO> createUser(@RequestBody CreateUserRequest request) {
         UserDTO user = userService.createUser(request);
         return ApiResponse.success(user);
@@ -59,6 +63,7 @@ public class UserController {
      * 更新用户
      */
     @PutMapping("/{id}")
+    @RequirePermission("user:update")
     public ApiResponse<UserDTO> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
         UserDTO user = userService.updateUser(id, request);
         return ApiResponse.success(user);
@@ -68,6 +73,7 @@ public class UserController {
      * 更新用户状态
      */
     @PutMapping("/{id}/status")
+    @RequirePermission("user:disable")
     public ApiResponse<Void> updateUserStatus(@PathVariable Long id, @RequestBody String status) {
         userService.updateUserStatus(id, status);
         return ApiResponse.success(null);
@@ -77,6 +83,7 @@ public class UserController {
      * 重置用户密码
      */
     @PutMapping("/{id}/password")
+    @RequirePermission("user:reset-password")
     public ApiResponse<Void> resetPassword(@PathVariable Long id, @RequestBody String newPassword) {
         userService.resetPassword(id, newPassword);
         return ApiResponse.success(null);
@@ -86,6 +93,7 @@ public class UserController {
      * 分配角色
      */
     @PutMapping("/{id}/roles")
+    @RequirePermission("user:assign-role")
     public ApiResponse<Void> assignRoles(@PathVariable Long id, @RequestBody List<Long> roleIds) {
         userService.assignRoles(id, roleIds);
         return ApiResponse.success(null);

@@ -35,8 +35,8 @@ FROM sys_role r, sys_permission p
 WHERE r.role_code = 'KB_ADMIN'
   AND p.permission_code IN (
     'space:view', 'space:create', 'space:update', 'space:delete',
-    'document:view', 'document:upload', 'document:create', 'document:update', 'document:delete', 'document:rebuild',
-    'qa:view', 'qa:ask',
+    'document:view', 'document:download', 'document:upload', 'document:create', 'document:update', 'document:delete', 'document:rebuild',
+    'qa:view', 'qa:create', 'qa:update', 'qa:delete', 'qa:ask',
     'member:view', 'member:add', 'member:update', 'member:remove',
     'setting:view', 'setting:update'
   );
@@ -54,8 +54,8 @@ FROM sys_role r, sys_permission p
 WHERE r.role_code = 'USER'
   AND p.permission_code IN (
     'space:view',
-    'document:view',
-    'qa:view', 'qa:ask',
+    'document:view', 'document:download',
+    'qa:view', 'qa:create', 'qa:update', 'qa:delete', 'qa:ask',
     'member:view',
     'setting:view'
   );

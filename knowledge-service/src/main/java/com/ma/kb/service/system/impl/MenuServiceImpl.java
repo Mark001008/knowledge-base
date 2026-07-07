@@ -3,6 +3,7 @@ package com.ma.kb.service.system.impl;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.dal.mapper.auth.MenuMapper;
+import com.ma.kb.dal.mapper.auth.RoleMenuMapper;
 import com.ma.kb.dal.model.auth.MenuDO;
 import com.ma.kb.manager.auth.MenuManager;
 import com.ma.kb.manager.auth.bo.MenuBO;
@@ -27,10 +28,12 @@ public class MenuServiceImpl implements MenuService {
 
     private final MenuManager menuManager;
     private final MenuMapper menuMapper;
+    private final RoleMenuMapper roleMenuMapper;
 
-    public MenuServiceImpl(MenuManager menuManager, MenuMapper menuMapper) {
+    public MenuServiceImpl(MenuManager menuManager, MenuMapper menuMapper, RoleMenuMapper roleMenuMapper) {
         this.menuManager = menuManager;
         this.menuMapper = menuMapper;
+        this.roleMenuMapper = roleMenuMapper;
     }
 
     @Override
@@ -103,6 +106,9 @@ public class MenuServiceImpl implements MenuService {
         MenuDO menuDO = menuMapper.selectById(id);
         if (menuDO == null) {
             throw new BusinessException(ErrorCode.MENU_NOT_FOUND);
+        }
+        if (roleMenuMapper.countByMenuId(id) > 0) {
+            throw new BusinessException(ErrorCode.MENU_HAS_ROLES);
         }
 
         menuMapper.deleteById(id);

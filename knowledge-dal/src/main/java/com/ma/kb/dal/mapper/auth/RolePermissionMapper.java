@@ -22,4 +22,9 @@ public interface RolePermissionMapper extends BaseMapper<RolePermissionDO> {
      * 查询角色的权限ID列表
      */
     List<Long> selectPermissionIdsByRoleId(@Param("roleId") Long roleId);
+
+    /**
+     * 统计绑定指定权限的角色数
+     */
+    long countByPermissionId(@Param("permissionId") Long permissionId);
 }

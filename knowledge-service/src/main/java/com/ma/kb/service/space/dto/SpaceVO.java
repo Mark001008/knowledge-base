@@ -3,6 +3,8 @@ package com.ma.kb.service.space.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.ma.kb.service.chat.dto.IndexHealthDTO;
+
 /**
  * 知识库视图对象
  */
@@ -19,6 +21,7 @@ public record SpaceVO(
         Integer chunkSize,
         Integer chunkOverlap,
         Integer documentCount,
+        IndexHealthDTO indexHealth,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

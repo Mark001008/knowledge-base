@@ -18,7 +18,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,7 +86,7 @@ class ChatServiceImplTest {
         when(chatManager.saveMessage(any())).thenReturn(userMsgBO);
 
         RagService.RagResult ragResult = new RagService.RagResult(
-                "回答内容", List.of(), "mock-model", 100, 50, 200L);
+                "回答内容", List.of(), "mock-model", 100, 50, 200L, null);
         when(ragService.ask("问题", SPACE_ID)).thenReturn(ragResult);
 
         ChatMessageBO assistantMsgBO = buildMessageBO(2L, ChatRoleEnum.ASSISTANT.getCode(), "回答内容");
@@ -97,6 +99,34 @@ class ChatServiceImplTest {
         assertNotNull(response);
         assertEquals(2L, response.messageId());
         assertEquals("回答内容", response.answer());
+    }
+
+    @Test
+    void streamMessageEmitsDeltaAndComplete() {
+        ChatSessionBO sessionBO = buildSessionBO(SESSION_ID);
+        when(chatManager.getSessionById(SESSION_ID)).thenReturn(sessionBO);
+        when(spaceManager.getMemberRole(SPACE_ID, USER_ID)).thenReturn("READER");
+
+        ChatMessageBO userMsgBO = buildMessageBO(1L, ChatRoleEnum.USER.getCode(), "问题");
+        ChatMessageBO assistantMsgBO = buildMessageBO(2L, ChatRoleEnum.ASSISTANT.getCode(), "回答内容");
+        when(chatDTOConverter.toUserMessageBO(SESSION_ID, "问题")).thenReturn(userMsgBO);
+        when(chatDTOConverter.toAssistantMessageBO(any(), any(), any(), anyInt(), anyInt(), anyLong())).thenReturn(assistantMsgBO);
+        when(chatManager.saveMessage(any())).thenReturn(userMsgBO, assistantMsgBO);
+        when(ragService.askStream(eq("问题"), eq(SPACE_ID), any())).thenAnswer(invocation -> {
+            Consumer<String> consumer = invocation.getArgument(2);
+            consumer.accept("回答");
+            consumer.accept("内容");
+            return new RagService.RagResult("回答内容", List.of(), "mock-model", 100, 50, 200L, null);
+        });
+
+        CapturingSink sink = new CapturingSink();
+        chatService.streamMessage(USER_ID, SESSION_ID, new ChatMessageRequest("问题"), sink);
+
+        assertEquals(List.of("回答", "内容"), sink.deltas);
+        assertNotNull(sink.completed);
+        assertEquals(2L, sink.completed.messageId());
+        assertEquals("回答内容", sink.completed.answer());
+        assertTrue(sink.errors.isEmpty());
     }
 
     @Test
@@ -157,5 +187,32 @@ class ChatServiceImplTest {
         bo.setContent(content);
         bo.setCreatedAt(LocalDateTime.now());
         return bo;
+    }
+
+    private static class CapturingSink implements com.ma.kb.service.chat.ChatStreamSink {
+        private final List<String> statuses = new ArrayList<>();
+        private final List<String> deltas = new ArrayList<>();
+        private final List<String> errors = new ArrayList<>();
+        private ChatMessageResponse completed;
+
+        @Override
+        public void status(String message) {
+            statuses.add(message);
+        }
+
+        @Override
+        public void delta(String content) {
+            deltas.add(content);
+        }
+
+        @Override
+        public void complete(ChatMessageResponse response) {
+            completed = response;
+        }
+
+        @Override
+        public void error(String message) {
+            errors.add(message);
+        }
     }
 }

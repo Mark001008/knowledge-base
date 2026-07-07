@@ -68,6 +68,28 @@ public class DocumentManager {
         return documentMapper.countBySpaceId(spaceId);
     }
 
+    public int countChunksBySpaceId(Long spaceId) {
+        if (spaceId == null) {
+            return 0;
+        }
+        Long count = documentChunkMapper.selectCount(
+                new LambdaQueryWrapper<DocumentChunkDO>()
+                        .eq(DocumentChunkDO::getSpaceId, spaceId)
+        );
+        return count == null ? 0 : count.intValue();
+    }
+
+    public int countChunksByDocumentId(Long documentId) {
+        if (documentId == null) {
+            return 0;
+        }
+        Long count = documentChunkMapper.selectCount(
+                new LambdaQueryWrapper<DocumentChunkDO>()
+                        .eq(DocumentChunkDO::getDocumentId, documentId)
+        );
+        return count == null ? 0 : count.intValue();
+    }
+
     public void saveChunks(List<DocumentChunkBO> chunks) {
         for (DocumentChunkBO chunk : chunks) {
             DocumentChunkDO chunkDO = documentConverter.toChunkDO(chunk);

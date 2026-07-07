@@ -13,6 +13,7 @@ public record DocumentVO(
         Long fileSize,
         String parseStatus,
         String errorMessage,
+        Integer chunkCount,
         Long uploadedBy,
         String uploadedByName,
         LocalDateTime createdAt,

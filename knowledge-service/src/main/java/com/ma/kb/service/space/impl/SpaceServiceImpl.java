@@ -14,6 +14,7 @@ import com.ma.kb.manager.document.bo.DocumentBO;
 import com.ma.kb.manager.space.SpaceManager;
 import com.ma.kb.manager.space.bo.SpaceBO;
 import com.ma.kb.manager.space.bo.SpaceMemberBO;
+import com.ma.kb.service.chat.dto.IndexHealthDTO;
 import com.ma.kb.service.space.SpaceService;
 import com.ma.kb.service.space.converter.SpaceDTOConverter;
 import com.ma.kb.service.space.dto.*;
@@ -235,12 +236,44 @@ public class SpaceServiceImpl implements SpaceService {
     }
 
     private SpaceVO toVO(SpaceBO space, Integer documentCount) {
+        IndexHealthDTO indexHealth = buildIndexHealth(space.getId());
         return new SpaceVO(
                 space.getId(), space.getName(), space.getDescription(),
                 space.getOwnerId(), null, space.getVisibility(),
                 space.getTopK(), space.getSimilarityThreshold(), space.getTemperature(),
                 space.getChunkSize(), space.getChunkOverlap(),
-                documentCount, space.getCreatedAt(), space.getUpdatedAt()
+                documentCount, indexHealth, space.getCreatedAt(), space.getUpdatedAt()
+        );
+    }
+
+    private IndexHealthDTO buildIndexHealth(Long spaceId) {
+        List<DocumentBO> documents = documentManager.listBySpaceId(spaceId);
+        int completed = 0;
+        int processing = 0;
+        int failed = 0;
+        java.time.LocalDateTime lastIndexedAt = null;
+        for (DocumentBO document : documents) {
+            String status = document.getParseStatus();
+            if ("COMPLETED".equals(status)) {
+                completed++;
+                if (document.getUpdatedAt() != null &&
+                        (lastIndexedAt == null || document.getUpdatedAt().isAfter(lastIndexedAt))) {
+                    lastIndexedAt = document.getUpdatedAt();
+                }
+            } else if ("FAILED".equals(status)) {
+                failed++;
+            } else {
+                processing++;
+            }
+        }
+        return new IndexHealthDTO(
+                documents.size(),
+                completed,
+                processing,
+                failed,
+                documentManager.countChunksBySpaceId(spaceId),
+                vectorSearchService.isEnabled(),
+                lastIndexedAt
         );
     }
 

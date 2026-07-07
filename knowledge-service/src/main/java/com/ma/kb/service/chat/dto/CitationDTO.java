@@ -11,6 +11,7 @@ public record CitationDTO(
         String documentName,
         Long chunkId,
         Integer pageNumber,
+        Integer chunkIndex,
         BigDecimal score,
         String quoteText
 ) {

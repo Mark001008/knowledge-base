@@ -8,6 +8,7 @@ import java.util.List;
 public record ChatMessageResponse(
         Long messageId,
         String answer,
-        List<CitationDTO> citations
+        List<CitationDTO> citations,
+        RetrievalDiagnosticsDTO diagnostics
 ) {
 }

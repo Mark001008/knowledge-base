@@ -13,6 +13,7 @@ import com.ma.kb.manager.chat.bo.ChatMessageBO;
 import com.ma.kb.manager.chat.bo.ChatSessionBO;
 import com.ma.kb.manager.space.SpaceManager;
 import com.ma.kb.service.chat.ChatService;
+import com.ma.kb.service.chat.ChatStreamSink;
 import com.ma.kb.service.chat.converter.ChatDTOConverter;
 import com.ma.kb.service.chat.dto.*;
 import org.slf4j.Logger;
@@ -108,29 +109,64 @@ public class ChatServiceImpl implements ChatService {
                 ragResult.promptTokens(), ragResult.completionTokens(), ragResult.latencyMs());
         ChatMessageBO savedMsg = chatManager.saveMessage(assistantMsg);
 
-        // 保存引用
-        List<CitationDTO> citations = new ArrayList<>();
-        if (ragResult.citations() != null && !ragResult.citations().isEmpty()) {
-            List<AnswerCitationBO> citationBOs = new ArrayList<>();
-            for (SearchResult sr : ragResult.citations()) {
-                AnswerCitationBO citation = chatDTOConverter.toCitationBO(savedMsg.getId(), sr);
-                citationBOs.add(citation);
-
-                String citationId = sr.getDocumentId() + "_" + sr.getChunkId();
-                citations.add(new CitationDTO(
-                        citationId,
-                        sr.getDocumentId(), sr.getDocumentName(),
-                        sr.getChunkId(), sr.getPageNumber(),
-                        sr.getScore(), sr.getContent()
-                ));
-            }
-            chatManager.saveCitations(citationBOs);
-        }
+        List<CitationDTO> citations = saveCitations(savedMsg.getId(), ragResult.citations());
 
         log.info("问答完成: sessionId={}, answerLength={}, citations={}",
                 sessionId, ragResult.answer().length(), citations.size());
 
-        return new ChatMessageResponse(savedMsg.getId(), ragResult.answer(), citations);
+        return new ChatMessageResponse(savedMsg.getId(), ragResult.answer(), citations, toDiagnosticsDTO(ragResult.diagnostics()));
+    }
+
+    @Override
+    public void streamMessage(Long userId, Long sessionId, ChatMessageRequest request, ChatStreamSink sink) {
+        try {
+            ChatSessionBO session = chatManager.getSessionById(sessionId);
+            if (session == null) {
+                throw new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND);
+            }
+            checkSpaceAccess(userId, session.getSpaceId());
+
+            ChatMessageBO userMsg = chatDTOConverter.toUserMessageBO(sessionId, request.question());
+            chatManager.saveMessage(userMsg);
+
+            sink.status("正在检索知识库");
+            RagService.RagResult ragResult = ragService.askStream(request.question(), session.getSpaceId(), sink::delta);
+
+            ChatMessageBO assistantMsg = chatDTOConverter.toAssistantMessageBO(
+                    sessionId, ragResult.answer(), ragResult.modelName(),
+                    ragResult.promptTokens(), ragResult.completionTokens(), ragResult.latencyMs());
+            ChatMessageBO savedMsg = chatManager.saveMessage(assistantMsg);
+            List<CitationDTO> citations = saveCitations(savedMsg.getId(), ragResult.citations());
+            ChatMessageResponse response = new ChatMessageResponse(
+                    savedMsg.getId(), ragResult.answer(), citations, toDiagnosticsDTO(ragResult.diagnostics()));
+
+            log.info("流式问答完成: sessionId={}, answerLength={}, citations={}",
+                    sessionId, ragResult.answer().length(), citations.size());
+            sink.complete(response);
+        } catch (Exception e) {
+            log.error("流式问答失败: sessionId={}", sessionId, e);
+            sink.error(e.getMessage() == null ? "流式问答失败" : e.getMessage());
+        }
+    }
+
+    @Override
+    public ChatMessageResponse diagnose(Long userId, Long spaceId, ChatMessageRequest request) {
+        checkSpaceAccess(userId, spaceId);
+        RagService.RagResult ragResult = ragService.ask(request.question(), spaceId);
+        List<CitationDTO> citations = ragResult.citations() == null
+                ? List.of()
+                : ragResult.citations().stream()
+                        .map(sr -> toCitationDTO(sr, sr.getDocumentId() + "_" + sr.getChunkId()))
+                        .toList();
+        log.info("RAG 查询诊断完成: userId={}, spaceId={}, hitCount={}, mode={}",
+                userId, spaceId, citations.size(), ragResult.diagnostics().retrievalMode());
+        return new ChatMessageResponse(null, ragResult.answer(), citations, toDiagnosticsDTO(ragResult.diagnostics()));
+    }
+
+    @Override
+    public void submitFeedback(Long userId, ChatFeedbackRequest request) {
+        log.info("问答反馈: userId={}, messageId={}, rating={}, reason={}",
+                userId, request.messageId(), request.rating(), request.reason());
     }
 
     @Override
@@ -152,12 +188,12 @@ public class ChatServiceImpl implements ChatService {
                         .map(c -> {
                             String citationId = c.getDocumentId() + "_" + c.getChunkId();
                             return new CitationDTO(citationId, c.getDocumentId(), c.getDocumentName(),
-                                    c.getChunkId(), c.getPageNumber(), c.getScore(), c.getQuoteText());
+                                    c.getChunkId(), c.getPageNumber(), null, c.getScore(), c.getQuoteText());
                         })
                         .toList();
             }
             result.add(new ChatMessageVO(msg.getId(), msg.getRole(), msg.getContent(),
-                    msg.getModelName(), citations, msg.getCreatedAt()));
+                    msg.getModelName(), citations, null, msg.getCreatedAt()));
         }
 
         return result;
@@ -203,5 +239,60 @@ public class ChatServiceImpl implements ChatService {
     private boolean isSystemAdmin(Long userId) {
         UserBO user = userManager.getById(userId);
         return user != null && user.getRoles() != null && user.getRoles().contains(SYSTEM_ADMIN_ROLE);
+    }
+
+    private CitationDTO toCitationDTO(SearchResult sr, String citationId) {
+        return new CitationDTO(
+                citationId,
+                sr.getDocumentId(), sr.getDocumentName(),
+                sr.getChunkId(), sr.getPageNumber(), sr.getChunkIndex(),
+                sr.getScore(), sr.getContent()
+        );
+    }
+
+    private List<CitationDTO> saveCitations(Long messageId, List<SearchResult> searchResults) {
+        List<CitationDTO> citations = new ArrayList<>();
+        if (searchResults == null || searchResults.isEmpty()) {
+            return citations;
+        }
+        List<AnswerCitationBO> citationBOs = new ArrayList<>();
+        for (SearchResult sr : searchResults) {
+            AnswerCitationBO citation = chatDTOConverter.toCitationBO(messageId, sr);
+            citationBOs.add(citation);
+
+            String citationId = sr.getDocumentId() + "_" + sr.getChunkId();
+            citations.add(toCitationDTO(sr, citationId));
+        }
+        chatManager.saveCitations(citationBOs);
+        return citations;
+    }
+
+    private RetrievalDiagnosticsDTO toDiagnosticsDTO(RagService.RetrievalDiagnostics diagnostics) {
+        if (diagnostics == null) {
+            return null;
+        }
+        RagService.IndexHealth health = diagnostics.indexHealth();
+        IndexHealthDTO indexHealth = health == null ? null : new IndexHealthDTO(
+                health.totalDocuments(),
+                health.completedDocuments(),
+                health.processingDocuments(),
+                health.failedDocuments(),
+                health.chunkCount(),
+                health.vectorEnabled(),
+                health.lastIndexedAt()
+        );
+        return new RetrievalDiagnosticsDTO(
+                diagnostics.hitCount(),
+                diagnostics.bestScore(),
+                diagnostics.threshold(),
+                diagnostics.topK(),
+                diagnostics.retrievalMode(),
+                diagnostics.keywordFallbackUsed(),
+                diagnostics.enteredPrompt(),
+                diagnostics.lowConfidence(),
+                diagnostics.noAnswerReason(),
+                diagnostics.explanation(),
+                indexHealth
+        );
     }
 }

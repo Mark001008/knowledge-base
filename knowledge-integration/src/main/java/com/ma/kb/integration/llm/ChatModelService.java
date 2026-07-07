@@ -10,6 +10,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,10 +70,20 @@ public class ChatModelService {
         return realChat(systemPrompt, userMessage);
     }
 
+    /**
+     * 流式调用 LLM，逐段输出增量文本，并返回完整回答。
+     */
+    public ChatResponse chatStream(String systemPrompt, String userMessage, Consumer<String> deltaConsumer) {
+        if ("mock".equals(provider) || baseUrl.isBlank()) {
+            return mockChatStream(userMessage, deltaConsumer);
+        }
+        return realChatStream(systemPrompt, userMessage, deltaConsumer);
+    }
+
     private ChatResponse realChat(String systemPrompt, String userMessage) {
         long startTime = System.currentTimeMillis();
         try {
-            String requestBody = buildRequestBody(systemPrompt, userMessage);
+            String requestBody = buildRequestBody(systemPrompt, userMessage, false);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl + CHAT_COMPLETIONS_PATH))
                     .header("Content-Type", "application/json")
@@ -99,9 +111,48 @@ public class ChatModelService {
         }
     }
 
-    private String buildRequestBody(String systemPrompt, String userMessage) {
+    private ChatResponse realChatStream(String systemPrompt, String userMessage, Consumer<String> deltaConsumer) {
+        long startTime = System.currentTimeMillis();
+        try {
+            String requestBody = buildRequestBody(systemPrompt, userMessage, true);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + CHAT_COMPLETIONS_PATH))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .timeout(Duration.ofSeconds(readTimeoutSeconds))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<Stream<String>> response = httpClient.send(request, HttpResponse.BodyHandlers.ofLines());
+            if (response.statusCode() != 200) {
+                String body = String.join("\n", response.body().toList());
+                log.error("LLM 流式调用失败: statusCode={}, body={}", response.statusCode(), body);
+                throw new RuntimeException("LLM 流式调用失败: HTTP " + response.statusCode());
+            }
+
+            StringBuilder answer = new StringBuilder();
+            String[] actualModel = {modelName};
+            response.body().forEach(line -> parseStreamLine(line, answer, actualModel, deltaConsumer));
+
+            long latencyMs = System.currentTimeMillis() - startTime;
+            log.info("LLM 流式调用完成: model={}, completionChars={}, latency={}ms",
+                    actualModel[0], answer.length(), latencyMs);
+            return new ChatResponse(answer.toString(), actualModel[0], 0, 0);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("LLM 流式调用被中断", e);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("LLM 流式调用异常", e);
+            throw new RuntimeException("LLM 流式调用异常: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildRequestBody(String systemPrompt, String userMessage, boolean stream) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("model", modelName);
+        root.put("stream", stream);
 
         ArrayNode messages = root.putArray("messages");
         ObjectNode systemMsg = messages.addObject();
@@ -112,6 +163,35 @@ public class ChatModelService {
         userMsg.put("content", userMessage);
 
         return root.toString();
+    }
+
+    private void parseStreamLine(String line, StringBuilder answer, String[] actualModel,
+                                 Consumer<String> deltaConsumer) {
+        if (line == null || line.isBlank()) {
+            return;
+        }
+        String data = line.startsWith("data:") ? line.substring("data:".length()).trim() : line.trim();
+        if (data.isBlank() || "[DONE]".equals(data)) {
+            return;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(data);
+            String model = root.path("model").asText(null);
+            if (model != null && !model.isBlank()) {
+                actualModel[0] = model;
+            }
+            JsonNode choice = root.path("choices").path(0);
+            String delta = choice.path("delta").path("content").asText(null);
+            if (delta == null || delta.isEmpty()) {
+                delta = choice.path("message").path("content").asText(null);
+            }
+            if (delta != null && !delta.isEmpty()) {
+                answer.append(delta);
+                deltaConsumer.accept(delta);
+            }
+        } catch (Exception e) {
+            log.warn("忽略无法解析的 LLM 流式片段: {}", data, e);
+        }
     }
 
     private ChatResponse parseResponse(String responseBody, long startTime) {
@@ -139,6 +219,16 @@ public class ChatModelService {
                 + "您的问题是：" + userMessage + "\n\n"
                 + "请配置 AI_BASE_URL 和 AI_API_KEY 环境变量以启用真实的 AI 问答功能。";
         return new ChatResponse(answer, "mock-model", 100, 50);
+    }
+
+    private ChatResponse mockChatStream(String userMessage, Consumer<String> deltaConsumer) {
+        ChatResponse response = mockChat(userMessage);
+        String answer = response.answer();
+        int step = 16;
+        for (int i = 0; i < answer.length(); i += step) {
+            deltaConsumer.accept(answer.substring(i, Math.min(answer.length(), i + step)));
+        }
+        return response;
     }
 
     /**

@@ -5,11 +5,15 @@ import com.ma.kb.core.auth.JwtService;
 import com.ma.kb.core.auth.RequirePermission;
 import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.chat.ChatService;
+import com.ma.kb.service.chat.ChatStreamSink;
 import com.ma.kb.service.chat.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 问答控制器
@@ -65,6 +69,46 @@ public class ChatController {
     }
 
     /**
+     * 流式发送问题。
+     */
+    @PostMapping(value = "/chat/sessions/{sessionId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RequirePermission("qa:ask")
+    public SseEmitter streamMessage(HttpServletRequest request,
+                                    @PathVariable Long sessionId,
+                                    @RequestBody ChatMessageRequest body) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        SseEmitter emitter = new SseEmitter(120_000L);
+        ChatStreamSink sink = new SseChatStreamSink(emitter);
+        CompletableFuture.runAsync(() -> chatService.streamMessage(userId, sessionId, body, sink));
+        return emitter;
+    }
+
+    /**
+     * 查询诊断，不写入会话。
+     */
+    @PostMapping("/spaces/{spaceId}/chat/diagnose")
+    @RequirePermission("qa:view")
+    public ApiResponse<ChatMessageResponse> diagnose(HttpServletRequest request,
+                                                     @PathVariable Long spaceId,
+                                                     @RequestBody ChatMessageRequest body) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        ChatMessageResponse response = chatService.diagnose(userId, spaceId, body);
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 提交问答反馈。
+     */
+    @PostMapping("/chat/feedback")
+    @RequirePermission("qa:view")
+    public ApiResponse<Void> submitFeedback(HttpServletRequest request,
+                                            @RequestBody ChatFeedbackRequest body) {
+        Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
+        chatService.submitFeedback(userId, body);
+        return ApiResponse.success(null);
+    }
+
+    /**
      * 查询会话消息列表
      */
     @GetMapping("/chat/sessions/{sessionId}/messages")
@@ -111,5 +155,44 @@ public class ChatController {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         List<RecentSessionVO> sessions = chatService.listRecentSessions(userId, limit);
         return ApiResponse.success(sessions);
+    }
+
+    private static class SseChatStreamSink implements ChatStreamSink {
+        private final SseEmitter emitter;
+
+        private SseChatStreamSink(SseEmitter emitter) {
+            this.emitter = emitter;
+        }
+
+        @Override
+        public void status(String message) {
+            send("status", new ChatStreamEvent("status", message, null), false);
+        }
+
+        @Override
+        public void delta(String content) {
+            send("delta", new ChatStreamEvent("delta", content, null), false);
+        }
+
+        @Override
+        public void complete(ChatMessageResponse response) {
+            send("complete", new ChatStreamEvent("complete", "", response), true);
+        }
+
+        @Override
+        public void error(String message) {
+            send("error", new ChatStreamEvent("error", message, null), true);
+        }
+
+        private synchronized void send(String name, ChatStreamEvent event, boolean complete) {
+            try {
+                emitter.send(SseEmitter.event().name(name).data(event));
+                if (complete) {
+                    emitter.complete();
+                }
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        }
     }
 }

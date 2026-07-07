@@ -361,6 +361,7 @@ public class DocumentServiceImpl implements DocumentService {
         return new DocumentVO(
                 doc.getId(), doc.getSpaceId(), doc.getFileName(), doc.getFileType(),
                 doc.getFileSize(), doc.getParseStatus(), doc.getErrorMessage(),
+                documentManager.countChunksByDocumentId(doc.getId()),
                 doc.getUploadedBy(), null, doc.getCreatedAt(), doc.getUpdatedAt()
         );
     }

@@ -12,6 +12,7 @@ public record ChatMessageVO(
         String content,
         String modelName,
         List<CitationDTO> citations,
+        RetrievalDiagnosticsDTO diagnostics,
         LocalDateTime createdAt
 ) {
 }

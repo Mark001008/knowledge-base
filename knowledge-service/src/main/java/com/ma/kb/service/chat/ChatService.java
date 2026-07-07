@@ -30,6 +30,21 @@ public interface ChatService {
     ChatMessageResponse sendMessage(Long userId, Long sessionId, ChatMessageRequest request);
 
     /**
+     * 流式发送问题。
+     */
+    void streamMessage(Long userId, Long sessionId, ChatMessageRequest request, ChatStreamSink sink);
+
+    /**
+     * 诊断指定知识库的一次查询，不写入会话。
+     */
+    ChatMessageResponse diagnose(Long userId, Long spaceId, ChatMessageRequest request);
+
+    /**
+     * 记录问答反馈。
+     */
+    void submitFeedback(Long userId, ChatFeedbackRequest request);
+
+    /**
      * 查询会话消息列表
      */
     List<ChatMessageVO> listMessages(Long userId, Long sessionId);

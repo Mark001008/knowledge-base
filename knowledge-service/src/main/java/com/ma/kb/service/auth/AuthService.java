@@ -18,4 +18,10 @@ public interface AuthService {
      * 获取当前用户信息
      */
     UserInfoDTO getCurrentUser(String token);
+
+    /**
+     * 用户登出
+     * 将 Token 加入黑名单
+     */
+    void logout(String token);
 }

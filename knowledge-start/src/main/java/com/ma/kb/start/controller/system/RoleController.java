@@ -6,6 +6,7 @@ import com.ma.kb.service.system.RoleService;
 import com.ma.kb.service.system.dto.CreateRoleRequest;
 import com.ma.kb.service.system.dto.RoleDetailDTO;
 import com.ma.kb.service.system.dto.UpdateRoleRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,7 +56,7 @@ public class RoleController {
      */
     @PostMapping
     @RequirePermission("role:create")
-    public ApiResponse<RoleDetailDTO> createRole(@RequestBody CreateRoleRequest request) {
+    public ApiResponse<RoleDetailDTO> createRole(@Valid @RequestBody CreateRoleRequest request) {
         RoleDetailDTO role = roleService.createRole(request);
         return ApiResponse.success(role);
     }
@@ -65,7 +66,7 @@ public class RoleController {
      */
     @PutMapping("/{id}")
     @RequirePermission("role:update")
-    public ApiResponse<RoleDetailDTO> updateRole(@PathVariable Long id, @RequestBody UpdateRoleRequest request) {
+    public ApiResponse<RoleDetailDTO> updateRole(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest request) {
         RoleDetailDTO role = roleService.updateRole(id, request);
         return ApiResponse.success(role);
     }

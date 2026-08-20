@@ -8,6 +8,7 @@ import com.ma.kb.service.chat.ChatService;
 import com.ma.kb.service.chat.ChatStreamSink;
 import com.ma.kb.service.chat.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -37,7 +38,7 @@ public class ChatController {
     @RequirePermission("qa:create")
     public ApiResponse<ChatSessionVO> createSession(HttpServletRequest request,
                                                     @PathVariable Long spaceId,
-                                                    @RequestBody ChatSessionCreateRequest body) {
+                                                    @Valid @RequestBody ChatSessionCreateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         ChatSessionVO session = chatService.createSession(userId, spaceId, body);
         return ApiResponse.success(session);
@@ -62,7 +63,7 @@ public class ChatController {
     @RequirePermission("qa:ask")
     public ApiResponse<ChatMessageResponse> sendMessage(HttpServletRequest request,
                                                         @PathVariable Long sessionId,
-                                                        @RequestBody ChatMessageRequest body) {
+                                                        @Valid @RequestBody ChatMessageRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         ChatMessageResponse response = chatService.sendMessage(userId, sessionId, body);
         return ApiResponse.success(response);
@@ -75,7 +76,7 @@ public class ChatController {
     @RequirePermission("qa:ask")
     public SseEmitter streamMessage(HttpServletRequest request,
                                     @PathVariable Long sessionId,
-                                    @RequestBody ChatMessageRequest body) {
+                                    @Valid @RequestBody ChatMessageRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SseEmitter emitter = new SseEmitter(120_000L);
         ChatStreamSink sink = new SseChatStreamSink(emitter);
@@ -90,7 +91,7 @@ public class ChatController {
     @RequirePermission("qa:view")
     public ApiResponse<ChatMessageResponse> diagnose(HttpServletRequest request,
                                                      @PathVariable Long spaceId,
-                                                     @RequestBody ChatMessageRequest body) {
+                                                     @Valid @RequestBody ChatMessageRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         ChatMessageResponse response = chatService.diagnose(userId, spaceId, body);
         return ApiResponse.success(response);
@@ -102,7 +103,7 @@ public class ChatController {
     @PostMapping("/chat/feedback")
     @RequirePermission("qa:view")
     public ApiResponse<Void> submitFeedback(HttpServletRequest request,
-                                            @RequestBody ChatFeedbackRequest body) {
+                                            @Valid @RequestBody ChatFeedbackRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         chatService.submitFeedback(userId, body);
         return ApiResponse.success(null);
@@ -127,7 +128,7 @@ public class ChatController {
     @RequirePermission("qa:update")
     public ApiResponse<Void> updateSession(HttpServletRequest request,
                                            @PathVariable Long sessionId,
-                                           @RequestBody ChatSessionUpdateRequest body) {
+                                           @Valid @RequestBody ChatSessionUpdateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         chatService.updateSession(userId, sessionId, body.title());
         return ApiResponse.success(null);

@@ -88,19 +88,7 @@ public class DocumentIngestionService {
             documentManager.saveChunks(chunks);
             if (vectorSearchService.isEnabled()) {
                 for (DocumentChunkBO chunk : chunks) {
-                    float[] embedding = vectorSearchService.embed(chunk.getContent());
-                    String vectorId = vectorSearchService.store(
-                            chunk.getId(),
-                            chunk.getSpaceId(),
-                            chunk.getDocumentId(),
-                            chunk.getContent(),
-                            embedding,
-                            Map.of(
-                                    "documentName", document.getFileName(),
-                                    "chunkIndex", chunk.getChunkIndex(),
-                                    "pageNumber", chunk.getPageNumber() == null ? 0 : chunk.getPageNumber()
-                            )
-                    );
+                    String vectorId = embedAndStoreWithRetry(chunk, document.getFileName());
                     chunk.setVectorId(vectorId);
                     documentManager.updateChunk(chunk);
                 }
@@ -116,6 +104,42 @@ public class DocumentIngestionService {
             clearPartialIndex(document.getId());
             updateStatus(document, DocumentStatusEnum.FAILED, e.getMessage());
         }
+    }
+
+    /**
+     * 带重试的向量化存储（最多3次，指数退避）
+     */
+    private String embedAndStoreWithRetry(DocumentChunkBO chunk, String documentName) {
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                float[] embedding = vectorSearchService.embed(chunk.getContent());
+                return vectorSearchService.store(
+                        chunk.getId(),
+                        chunk.getSpaceId(),
+                        chunk.getDocumentId(),
+                        chunk.getContent(),
+                        embedding,
+                        Map.of(
+                                "documentName", documentName,
+                                "chunkIndex", chunk.getChunkIndex(),
+                                "pageNumber", chunk.getPageNumber() == null ? 0 : chunk.getPageNumber()
+                        )
+                );
+            } catch (Exception e) {
+                log.warn("向量化存储失败 (attempt {}/{}): chunkId={}", attempt, maxAttempts, chunk.getId(), e);
+                if (attempt == maxAttempts) {
+                    throw e;
+                }
+                try {
+                    Thread.sleep((long) Math.pow(2, attempt) * 500);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("重试被中断", ie);
+                }
+            }
+        }
+        throw new RuntimeException("向量化存储失败，已重试" + maxAttempts + "次");
     }
 
     private void clearExistingIndex(Long documentId) {

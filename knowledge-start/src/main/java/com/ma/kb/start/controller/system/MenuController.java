@@ -9,6 +9,7 @@ import com.ma.kb.service.system.MenuService;
 import com.ma.kb.service.system.dto.CreateMenuRequest;
 import com.ma.kb.service.system.dto.UpdateMenuRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,7 +61,7 @@ public class MenuController {
      */
     @PostMapping
     @RequirePermission("menu:create")
-    public ApiResponse<MenuDTO> createMenu(@RequestBody CreateMenuRequest request) {
+    public ApiResponse<MenuDTO> createMenu(@Valid @RequestBody CreateMenuRequest request) {
         MenuDTO menu = menuService.createMenu(request);
         return ApiResponse.success(menu);
     }
@@ -70,7 +71,7 @@ public class MenuController {
      */
     @PutMapping("/{id}")
     @RequirePermission("menu:update")
-    public ApiResponse<MenuDTO> updateMenu(@PathVariable Long id, @RequestBody UpdateMenuRequest request) {
+    public ApiResponse<MenuDTO> updateMenu(@PathVariable Long id, @Valid @RequestBody UpdateMenuRequest request) {
         MenuDTO menu = menuService.updateMenu(id, request);
         return ApiResponse.success(menu);
     }

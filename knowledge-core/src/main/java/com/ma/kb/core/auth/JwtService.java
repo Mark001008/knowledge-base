@@ -21,11 +21,17 @@ import java.util.List;
 @Service
 public class JwtService {
 
+    private final TokenBlacklistService blacklistService;
+
     @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expires-in:7200}")
     private long expiresIn;
+
+    public JwtService(TokenBlacklistService blacklistService) {
+        this.blacklistService = blacklistService;
+    }
 
     /**
      * 生成 JWT Token
@@ -81,16 +87,28 @@ public class JwtService {
     }
 
     /**
-     * 校验 Token 是否有效
+     * 校验 Token 是否有效（包括黑名单检查）
      */
     public boolean validateToken(String token) {
         try {
+            // 先检查黑名单
+            if (blacklistService.isBlacklisted(token)) {
+                return false;
+            }
             parseToken(token);
             return true;
         } catch (SecurityException | MalformedJwtException | ExpiredJwtException
                  | UnsupportedJwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    /**
+     * 获取 Token 的过期时间（epoch second）
+     */
+    public long getTokenExpiry(String token) {
+        Claims claims = parseToken(token);
+        return claims.getExpiration().getTime() / 1000;
     }
 
     /**

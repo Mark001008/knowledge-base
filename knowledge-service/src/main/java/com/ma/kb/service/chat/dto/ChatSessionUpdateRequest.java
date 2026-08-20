@@ -1,9 +1,12 @@
 package com.ma.kb.service.chat.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 /**
  * 更新会话请求
  */
 public record ChatSessionUpdateRequest(
-        String title
+        @NotBlank(message = "会话标题不能为空") @Size(max = 200, message = "会话标题长度不能超过200字符") String title
 ) {
 }

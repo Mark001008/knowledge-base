@@ -11,6 +11,7 @@ import com.ma.kb.service.document.dto.DocumentUploadResponse;
 import com.ma.kb.service.document.dto.DocumentVO;
 import com.ma.kb.service.document.dto.OnlineDocumentRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +58,7 @@ public class DocumentController {
     @RequirePermission("document:create")
     public ApiResponse<DocumentUploadResponse> createOnlineDocument(HttpServletRequest request,
                                                                     @PathVariable Long spaceId,
-                                                                    @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
+                                                                    @Valid @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentUploadResponse response = documentService.createOnlineDocument(userId, spaceId, onlineDocumentRequest);
         return ApiResponse.success(response);
@@ -128,7 +129,7 @@ public class DocumentController {
     @RequirePermission("document:update")
     public ApiResponse<DocumentUploadResponse> updateContent(HttpServletRequest request,
                                                              @PathVariable Long id,
-                                                             @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
+                                                             @Valid @RequestBody OnlineDocumentRequest onlineDocumentRequest) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         DocumentUploadResponse response = documentService.updateContent(userId, id, onlineDocumentRequest);
         return ApiResponse.success(response);

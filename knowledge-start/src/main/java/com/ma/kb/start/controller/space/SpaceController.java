@@ -7,6 +7,7 @@ import com.ma.kb.core.auth.SecurityUtils;
 import com.ma.kb.service.space.SpaceService;
 import com.ma.kb.service.space.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,7 +33,7 @@ public class SpaceController {
     @PostMapping
     @RequirePermission("space:create")
     public ApiResponse<SpaceVO> create(HttpServletRequest request,
-                                       @RequestBody SpaceCreateRequest body) {
+                                       @Valid @RequestBody SpaceCreateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.create(userId, body);
         return ApiResponse.success(space);
@@ -66,7 +67,7 @@ public class SpaceController {
     @PutMapping("/{id}")
     @RequirePermission("space:update")
     public ApiResponse<SpaceVO> update(HttpServletRequest request, @PathVariable Long id,
-                                       @RequestBody SpaceUpdateRequest body) {
+                                       @Valid @RequestBody SpaceUpdateRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         SpaceVO space = spaceService.update(userId, id, body);
         return ApiResponse.success(space);
@@ -89,7 +90,7 @@ public class SpaceController {
     @PostMapping("/{id}/members")
     @RequirePermission("member:add")
     public ApiResponse<Void> addMember(HttpServletRequest request, @PathVariable Long id,
-                                       @RequestBody SpaceMemberRequest body) {
+                                       @Valid @RequestBody SpaceMemberRequest body) {
         Long userId = SecurityUtils.getCurrentUserId(request.getHeader("Authorization"), jwtService);
         spaceService.addMember(userId, id, body);
         return ApiResponse.success();

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JwtServiceTest {
 
     private JwtService jwtService;
+    private TokenBlacklistService tokenBlacklistService;
 
     // 用 Base64 编码的 256 位密钥
     private static final String SECRET = "dGhpc0lzYVNlY3JldEtleUZvckpXVFRlc3RpbmdQdXJwb3Nlc09ubHk=";
@@ -19,7 +20,8 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService();
+        tokenBlacklistService = new TokenBlacklistService();
+        jwtService = new JwtService(tokenBlacklistService);
         ReflectionTestUtils.setField(jwtService, "secret", SECRET);
         ReflectionTestUtils.setField(jwtService, "expiresIn", EXPIRES_IN);
     }
@@ -88,6 +90,18 @@ class JwtServiceTest {
     @Test
     void validateTokenWithEmptyString() {
         assertFalse(jwtService.validateToken(""));
+    }
+
+    @Test
+    void validateTokenWithBlacklistedToken() {
+        String token = jwtService.generateToken(1L, "admin", List.of("ROLE_ADMIN"));
+        long expiry = jwtService.getTokenExpiry(token);
+
+        // 加入黑名单
+        tokenBlacklistService.blacklist(token, expiry);
+
+        // 验证失败
+        assertFalse(jwtService.validateToken(token));
     }
 
     @Test

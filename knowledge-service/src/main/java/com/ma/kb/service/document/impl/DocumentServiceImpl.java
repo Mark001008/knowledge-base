@@ -42,6 +42,7 @@ public class DocumentServiceImpl implements DocumentService {
     private static final Logger log = LoggerFactory.getLogger(DocumentServiceImpl.class);
     private static final String SYSTEM_ADMIN_ROLE = "SYSTEM_ADMIN";
     private static final int MAX_DOCUMENTS_PER_SPACE = 200;
+    private static final long MAX_FILE_SIZE = 20L * 1024 * 1024; // 20MB
 
     private final DocumentManager documentManager;
     private final SpaceManager spaceManager;
@@ -81,6 +82,10 @@ public class DocumentServiceImpl implements DocumentService {
         String originalFilename = file.getOriginalFilename();
         if (!FileTypeEnum.isSupported(originalFilename)) {
             throw new BusinessException(ErrorCode.DOCUMENT_TYPE_NOT_SUPPORTED);
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "上传文件大小超过限制（最大20MB）");
         }
 
         FileTypeEnum fileType = FileTypeEnum.fromFilename(originalFilename);

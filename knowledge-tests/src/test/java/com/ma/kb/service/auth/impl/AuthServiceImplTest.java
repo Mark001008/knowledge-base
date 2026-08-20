@@ -4,6 +4,7 @@ import com.ma.kb.common.enums.UserStatusEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.TokenBlacklistService;
 import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.auth.bo.UserBO;
 import com.ma.kb.service.auth.converter.UserDTOConverter;
@@ -36,6 +37,8 @@ class AuthServiceImplTest {
     @Mock
     private JwtService jwtService;
     @Mock
+    private TokenBlacklistService tokenBlacklistService;
+    @Mock
     private UserDTOConverter userDTOConverter;
     @Mock
     private PermissionService permissionService;
@@ -46,7 +49,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(userManager, passwordEncoder, jwtService, userDTOConverter, permissionService, menuService);
+        authService = new AuthServiceImpl(userManager, passwordEncoder, jwtService, tokenBlacklistService, userDTOConverter, permissionService, menuService);
     }
 
     // ==================== login ====================
@@ -149,6 +152,33 @@ class AuthServiceImplTest {
                 () -> authService.getCurrentUser(token));
 
         assertEquals(ErrorCode.USER_NOT_FOUND.getCode(), ex.getCode());
+    }
+
+    // ==================== logout ====================
+
+    @Test
+    void logoutSuccess() {
+        String token = "valid-token";
+        when(jwtService.getTokenExpiry(token)).thenReturn(1234567890L);
+
+        authService.logout(token);
+
+        verify(tokenBlacklistService).blacklist(token, 1234567890L);
+    }
+
+    @Test
+    void logoutWithNullToken() {
+        authService.logout(null);
+        verifyNoInteractions(tokenBlacklistService);
+    }
+
+    @Test
+    void logoutWithExpiredToken() {
+        String token = "expired-token";
+        when(jwtService.getTokenExpiry(token)).thenThrow(new RuntimeException("Token expired"));
+
+        authService.logout(token);
+        // 不抛异常，静默处理
     }
 
     // ==================== helper ====================

@@ -6,6 +6,7 @@ import com.ma.kb.service.system.UserService;
 import com.ma.kb.service.system.dto.CreateUserRequest;
 import com.ma.kb.service.system.dto.UpdateUserRequest;
 import com.ma.kb.service.system.dto.UserDTO;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,7 +55,7 @@ public class UserController {
      */
     @PostMapping
     @RequirePermission("user:create")
-    public ApiResponse<UserDTO> createUser(@RequestBody CreateUserRequest request) {
+    public ApiResponse<UserDTO> createUser(@Valid @RequestBody CreateUserRequest request) {
         UserDTO user = userService.createUser(request);
         return ApiResponse.success(user);
     }
@@ -64,7 +65,7 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @RequirePermission("user:update")
-    public ApiResponse<UserDTO> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+    public ApiResponse<UserDTO> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         UserDTO user = userService.updateUser(id, request);
         return ApiResponse.success(user);
     }

@@ -7,6 +7,7 @@ import com.ma.kb.service.auth.dto.LoginRequest;
 import com.ma.kb.service.auth.dto.LoginResponse;
 import com.ma.kb.service.auth.dto.UserInfoDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,7 +31,7 @@ public class AuthController {
      * 用户登录
      */
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ApiResponse.success(response);
     }
@@ -43,5 +44,16 @@ public class AuthController {
         String token = SecurityUtils.extractBearerToken(request.getHeader("Authorization"));
         UserInfoDTO userInfo = authService.getCurrentUser(token);
         return ApiResponse.success(userInfo);
+    }
+
+    /**
+     * 用户登出
+     * 将当前 Token 加入黑名单，使其立即失效
+     */
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(HttpServletRequest request) {
+        String token = SecurityUtils.extractBearerToken(request.getHeader("Authorization"));
+        authService.logout(token);
+        return ApiResponse.success();
     }
 }

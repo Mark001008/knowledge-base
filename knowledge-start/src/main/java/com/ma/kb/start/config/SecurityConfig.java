@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -22,15 +24,24 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+public class SecurityConfig implements WebMvcConfigurer {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LoginRateLimitInterceptor loginRateLimitInterceptor;
     private final String allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          LoginRateLimitInterceptor loginRateLimitInterceptor,
                           @Value("${app.cors.allowed-origins:http://localhost:1008,http://127.0.0.1:1008}") String allowedOrigins) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.loginRateLimitInterceptor = loginRateLimitInterceptor;
         this.allowedOrigins = allowedOrigins;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(loginRateLimitInterceptor)
+                .addPathPatterns("/api/auth/login");
     }
 
     @Bean

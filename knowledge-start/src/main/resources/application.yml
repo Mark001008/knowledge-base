@@ -12,6 +12,11 @@ spring:
       connection-test-query: SELECT 1
       leak-detection-threshold: 60000
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
 server:
   port: 8080
   address: 0.0.0.0
@@ -23,12 +28,12 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 jwt:
-  secret: CHANGED_PLEASE_SET_JWT_SECRET_ENV_VAR
+  secret: ${JWT_SECRET:CHANGE_ME}
   expires-in: 7200
 
 agent:
   jwt:
-    secret: CHANGED_PLEASE_SET_JWT_SECRET_ENV_VAR
+    secret: ${AGENT_JWT_SECRET:CHANGE_ME}
 
 storage:
   type: local

@@ -9,6 +9,7 @@ import com.ma.kb.service.system.dto.CreatePermissionRequest;
 import com.ma.kb.service.system.dto.PermissionDTO;
 import com.ma.kb.service.system.dto.UpdatePermissionRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,7 +61,7 @@ public class PermissionController {
      */
     @PostMapping
     @RequirePermission("permission:create")
-    public ApiResponse<PermissionDTO> createPermission(@RequestBody CreatePermissionRequest request) {
+    public ApiResponse<PermissionDTO> createPermission(@Valid @RequestBody CreatePermissionRequest request) {
         PermissionDTO permission = permissionService.createPermission(request);
         return ApiResponse.success(permission);
     }
@@ -70,7 +71,7 @@ public class PermissionController {
      */
     @PutMapping("/{id}")
     @RequirePermission("permission:update")
-    public ApiResponse<PermissionDTO> updatePermission(@PathVariable Long id, @RequestBody UpdatePermissionRequest request) {
+    public ApiResponse<PermissionDTO> updatePermission(@PathVariable Long id, @Valid @RequestBody UpdatePermissionRequest request) {
         PermissionDTO permission = permissionService.updatePermission(id, request);
         return ApiResponse.success(permission);
     }

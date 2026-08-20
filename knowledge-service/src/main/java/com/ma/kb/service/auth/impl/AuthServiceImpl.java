@@ -4,6 +4,7 @@ import com.ma.kb.common.enums.UserStatusEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
 import com.ma.kb.core.auth.JwtService;
+import com.ma.kb.core.auth.TokenBlacklistService;
 import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.auth.bo.UserBO;
 import com.ma.kb.service.auth.AuthService;
@@ -34,16 +35,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserManager userManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final UserDTOConverter userDTOConverter;
     private final PermissionService permissionService;
     private final MenuService menuService;
 
     public AuthServiceImpl(UserManager userManager, PasswordEncoder passwordEncoder,
-                           JwtService jwtService, UserDTOConverter userDTOConverter,
+                           JwtService jwtService, TokenBlacklistService tokenBlacklistService,
+                           UserDTOConverter userDTOConverter,
                            PermissionService permissionService, MenuService menuService) {
         this.userManager = userManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.tokenBlacklistService = tokenBlacklistService;
         this.userDTOConverter = userDTOConverter;
         this.permissionService = permissionService;
         this.menuService = menuService;
@@ -100,6 +104,25 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return convertToUserInfoDTO(userBO);
+    }
+
+    @Override
+    public void logout(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+
+        try {
+            // 获取 Token 的过期时间
+            long expiresAt = jwtService.getTokenExpiry(token);
+            // 将 Token 加入黑名单
+            tokenBlacklistService.blacklist(token, expiresAt);
+            String username = jwtService.getUsername(token);
+            log.info("用户登出成功: {}", username);
+        } catch (Exception e) {
+            // Token 无效或已过期，忽略
+            log.debug("登出时 Token 解析失败（可能已过期）: {}", e.getMessage());
+        }
     }
 
     private UserInfoDTO convertToUserInfoDTO(UserBO userBO) {

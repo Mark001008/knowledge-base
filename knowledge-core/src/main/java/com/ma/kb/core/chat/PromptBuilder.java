@@ -43,8 +43,8 @@ public class PromptBuilder {
         if (history != null && !history.isEmpty()) {
             sb.append("对话历史：\n");
             for (ChatMessage msg : history) {
-                String roleLabel = "user".equals(msg.getRole()) ? "用户" : "助手";
-                sb.append(roleLabel).append(": ").append(msg.getContent()).append("\n");
+                String roleLabel = "user".equals(msg.role()) ? "用户" : "助手";
+                sb.append(roleLabel).append(": ").append(msg.content()).append("\n");
             }
             sb.append("\n");
         }

@@ -3,6 +3,7 @@ package com.ma.kb.service.chat.impl;
 import com.ma.kb.common.enums.ChatRoleEnum;
 import com.ma.kb.common.exception.BusinessException;
 import com.ma.kb.common.response.ErrorCode;
+import com.ma.kb.core.chat.PromptBuilder;
 import com.ma.kb.core.chat.RagService;
 import com.ma.kb.manager.auth.UserManager;
 import com.ma.kb.manager.auth.bo.UserBO;
@@ -100,8 +101,11 @@ public class ChatServiceImpl implements ChatService {
         ChatMessageBO userMsg = chatDTOConverter.toUserMessageBO(sessionId, request.question());
         chatManager.saveMessage(userMsg);
 
-        // 执行 RAG 问答
-        RagService.RagResult ragResult = ragService.ask(request.question(), session.getSpaceId());
+        // 查询历史消息（用于多轮对话上下文）
+        List<PromptBuilder.ChatMessage> history = buildChatHistory(sessionId);
+
+        // 执行 RAG 问答（带历史上下文）
+        RagService.RagResult ragResult = ragService.ask(request.question(), session.getSpaceId(), history);
 
         // 保存助手消息
         ChatMessageBO assistantMsg = chatDTOConverter.toAssistantMessageBO(
@@ -111,8 +115,8 @@ public class ChatServiceImpl implements ChatService {
 
         List<CitationDTO> citations = saveCitations(savedMsg.getId(), ragResult.citations());
 
-        log.info("问答完成: sessionId={}, answerLength={}, citations={}",
-                sessionId, ragResult.answer().length(), citations.size());
+        log.info("问答完成: sessionId={}, answerLength={}, citations={}, historySize={}",
+                sessionId, ragResult.answer().length(), citations.size(), history.size());
 
         return new ChatMessageResponse(savedMsg.getId(), ragResult.answer(), citations, toDiagnosticsDTO(ragResult.diagnostics()));
     }
@@ -224,6 +228,18 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // ==================== 私有方法 ====================
+
+    /**
+     * 构建多轮对话历史（最近10轮，即20条消息）
+     */
+    private List<PromptBuilder.ChatMessage> buildChatHistory(Long sessionId) {
+        int maxHistorySize = 20; // 最近20条消息（10轮对话）
+        List<ChatMessageBO> recentMessages = chatManager.listRecentMessagesBySessionId(sessionId, maxHistorySize);
+        
+        return recentMessages.stream()
+                .map(msg -> new PromptBuilder.ChatMessage(msg.getRole(), msg.getContent()))
+                .toList();
+    }
 
     private void checkSpaceAccess(Long userId, Long spaceId) {
         if (isSystemAdmin(userId)) {

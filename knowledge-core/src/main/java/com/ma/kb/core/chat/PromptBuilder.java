@@ -28,38 +28,56 @@ public class PromptBuilder {
     }
 
     /**
-     * 构造带上下文的用户消息
+     * 构造带上下文的用户消息（支持多轮对话历史）
      *
      * @param question 用户问题
      * @param results  检索结果
+     * @param history  历史消息列表（可为null，表示无历史）
      * @return 包含上下文的用户消息
      */
-    public String buildUserMessageWith(String question, List<SearchResult> results) {
-        if (results == null || results.isEmpty()) {
-            return question;
-        }
-
+    public String buildUserMessageWith(String question, List<SearchResult> results, 
+                                        List<ChatMessage> history) {
         StringBuilder sb = new StringBuilder();
-        sb.append("上下文：\n\n");
-
-        for (int i = 0; i < results.size(); i++) {
-            SearchResult result = results.get(i);
-            sb.append(String.format("[引用%d] 文档：%s", i + 1, result.getDocumentName()));
-            if (result.getPageNumber() != null && result.getPageNumber() > 0) {
-                sb.append(String.format("，页码：%d", result.getPageNumber()));
-            }
-            if (result.getChunkIndex() != null) {
-                sb.append(String.format("，分片：%d", result.getChunkIndex()));
+        
+        // 添加对话历史（如果有）
+        if (history != null && !history.isEmpty()) {
+            sb.append("对话历史：\n");
+            for (ChatMessage msg : history) {
+                String roleLabel = "user".equals(msg.getRole()) ? "用户" : "助手";
+                sb.append(roleLabel).append(": ").append(msg.getContent()).append("\n");
             }
             sb.append("\n");
-            sb.append(result.getContent());
-            sb.append("\n\n");
         }
-
-        sb.append("用户问题：\n");
-        sb.append(question);
-
+        
+        // 添加检索上下文
+        if (results != null && !results.isEmpty()) {
+            sb.append("上下文：\n\n");
+            for (int i = 0; i < results.size(); i++) {
+                SearchResult result = results.get(i);
+                sb.append(String.format("[引用%d] 文档：%s", i + 1, result.getDocumentName()));
+                if (result.getPageNumber() != null && result.getPageNumber() > 0) {
+                    sb.append(String.format("，页码：%d", result.getPageNumber()));
+                }
+                if (result.getChunkIndex() != null) {
+                    sb.append(String.format("，分片：%d", result.getChunkIndex()));
+                }
+                sb.append("\n");
+                sb.append(result.getContent());
+                sb.append("\n\n");
+            }
+        }
+        
+        // 添加当前问题
+        sb.append("用户问题：\n").append(question);
+        
         return sb.toString();
+    }
+
+    /**
+     * 兼容旧接口：无历史消息的单轮问答
+     */
+    public String buildUserMessageWith(String question, List<SearchResult> results) {
+        return buildUserMessageWith(question, results, null);
     }
 
     /**
@@ -68,4 +86,9 @@ public class PromptBuilder {
     public String buildNoContextAnswer() {
         return "当前知识库中未找到相关信息";
     }
+    
+    /**
+     * 内部类：用于历史消息传递
+     */
+    public record ChatMessage(String role, String content) {}
 }

@@ -43,7 +43,7 @@ public class ChatManager {
 
     public ChatSessionBO getSessionById(Long id) {
         ChatSessionDO sessionDO = sessionMapper.selectById(id);
-        return sessionDO != null ? chatConverter.toSessionBO(sessionDO) : null;
+        return sessionDO != null ? chatConverter.toSessionDO(sessionDO) : null;
     }
 
     public List<ChatSessionBO> listSessionsBySpaceIdAndUserId(Long spaceId, Long userId) {
@@ -89,6 +89,24 @@ public class ChatManager {
                         .orderByAsc(ChatMessageDO::getCreatedAt)
         );
         return messages.stream().map(chatConverter::toMessageBO).toList();
+    }
+
+    /**
+     * 查询会话最近N条消息（用于多轮对话上下文）
+     */
+    public List<ChatMessageBO> listRecentMessagesBySessionId(Long sessionId, int limit) {
+        // 先查询最新的 limit 条消息ID
+        List<ChatMessageDO> messages = messageMapper.selectList(
+                new LambdaQueryWrapper<ChatMessageDO>()
+                        .eq(ChatMessageDO::getSessionId, sessionId)
+                        .orderByDesc(ChatMessageDO::getCreatedAt)
+                        .last("LIMIT " + limit)
+        );
+        // 反转为时间正序
+        return messages.stream()
+                .map(chatConverter::toMessageBO)
+                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                .toList();
     }
 
     public void saveCitations(List<AnswerCitationBO> citations) {

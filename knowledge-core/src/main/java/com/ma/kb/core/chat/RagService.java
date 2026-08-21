@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.ma.kb.core.chat.PromptBuilder.ChatMessage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -55,23 +56,38 @@ public class RagService {
      *
      * @param question 用户问题
      * @param spaceId  知识库ID
+     * @param history  历史消息列表（可为null，表示无历史）
      * @return RAG 回答结果
      */
-    public RagResult ask(String question, Long spaceId) {
+    public RagResult ask(String question, Long spaceId, List<ChatMessage> history) {
         long startTime = System.currentTimeMillis();
         RetrievalContext retrievalContext = retrieve(question, spaceId);
 
-        return answerWithContext(question, spaceId, retrievalContext, startTime, null);
+        return answerWithContext(question, spaceId, retrievalContext, startTime, null, history);
+    }
+    
+    /**
+     * 兼容旧接口：无历史消息的单轮问答
+     */
+    public RagResult ask(String question, Long spaceId) {
+        return ask(question, spaceId, null);
     }
 
     /**
      * 执行流式 RAG 问答。
      */
-    public RagResult askStream(String question, Long spaceId, Consumer<String> deltaConsumer) {
+    public RagResult askStream(String question, Long spaceId, Consumer<String> deltaConsumer, List<ChatMessage> history) {
         long startTime = System.currentTimeMillis();
         RetrievalContext retrievalContext = retrieve(question, spaceId);
 
-        return answerWithContext(question, spaceId, retrievalContext, startTime, deltaConsumer);
+        return answerWithContext(question, spaceId, retrievalContext, startTime, deltaConsumer, history);
+    }
+    
+    /**
+     * 兼容旧接口：无历史消息的流式问答
+     */
+    public RagResult askStream(String question, Long spaceId, Consumer<String> deltaConsumer) {
+        return askStream(question, spaceId, deltaConsumer, null);
     }
 
     private RetrievalContext retrieve(String question, Long spaceId) {
@@ -102,7 +118,7 @@ public class RagService {
     }
 
     private RagResult answerWithContext(String question, Long spaceId, RetrievalContext retrievalContext,
-                                        long startTime, Consumer<String> deltaConsumer) {
+                                        long startTime, Consumer<String> deltaConsumer, List<ChatMessage> history) {
         List<SearchResult> searchResults = retrievalContext.searchResults();
         // 4. 构造 Prompt 并调用 LLM
         String answer;
@@ -110,8 +126,8 @@ public class RagService {
         int promptTokens;
         int completionTokens;
 
-        if (searchResults.isEmpty()) {
-            // 无相关上下文，直接返回固定回答
+        if (searchResults.isEmpty() && (history == null || history.isEmpty())) {
+            // 无相关上下文且无历史，直接返回固定回答
             answer = promptBuilder.buildNoContextAnswer();
             modelName = "none";
             promptTokens = 0;
@@ -119,11 +135,11 @@ public class RagService {
             if (deltaConsumer != null) {
                 deltaConsumer.accept(answer);
             }
-            log.info("RAG 问答: spaceId={}, 无相关上下文, 返回固定回答", spaceId);
+            log.info("RAG 问答: spaceId={}, 无相关上下文且无历史, 返回固定回答", spaceId);
         } else {
-            // 有上下文，调用 LLM
+            // 有上下文或有历史，调用 LLM
             String systemPrompt = promptBuilder.buildSystemPrompt();
-            String userMessage = promptBuilder.buildUserMessageWith(question, searchResults);
+            String userMessage = promptBuilder.buildUserMessageWith(question, searchResults, history);
 
             ChatModelService.ChatResponse chatResponse = deltaConsumer == null
                     ? chatModelService.chat(systemPrompt, userMessage)

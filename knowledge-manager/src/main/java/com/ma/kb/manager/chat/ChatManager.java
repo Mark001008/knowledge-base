@@ -43,7 +43,7 @@ public class ChatManager {
 
     public ChatSessionBO getSessionById(Long id) {
         ChatSessionDO sessionDO = sessionMapper.selectById(id);
-        return sessionDO != null ? chatConverter.toSessionDO(sessionDO) : null;
+        return sessionDO != null ? chatConverter.toSessionBO(sessionDO) : null;
     }
 
     public List<ChatSessionBO> listSessionsBySpaceIdAndUserId(Long spaceId, Long userId) {

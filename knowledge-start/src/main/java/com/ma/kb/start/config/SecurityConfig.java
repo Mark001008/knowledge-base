@@ -27,13 +27,16 @@ import java.util.List;
 public class SecurityConfig implements WebMvcConfigurer {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final LoginRateLimitInterceptor loginRateLimitInterceptor;
     private final String allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
                           LoginRateLimitInterceptor loginRateLimitInterceptor,
                           @Value("${app.cors.allowed-origins:http://localhost:1008,http://127.0.0.1:1008}") String allowedOrigins) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.loginRateLimitInterceptor = loginRateLimitInterceptor;
         this.allowedOrigins = allowedOrigins;
     }
@@ -50,6 +53,9 @@ public class SecurityConfig implements WebMvcConfigurer {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/login",
